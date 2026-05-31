@@ -24,17 +24,44 @@ import {
   CUSTOMERS,
 } from './composables/useGameState'
 import { ACHIEVEMENTS } from './data/customers'
+import { TEA_THEMES } from './data/themes'
+import { canBuyTeaTheme, getAvailableTeaThemes, isDailyRewardAvailable, claimDailyReward, DAILY_REWARD_COINS, checkMetaAchievements, type ServeStats } from './composables/useMeta'
 import IngredientShelf from './components/IngredientShelf.vue'
 import CustomerDisplay from './components/CustomerDisplay.vue'
 import GameHud from './components/GameHud.vue'
 import CupVisual from './components/CupVisual.vue'
 
-type Screen = 'start' | 'game' | 'result' | 'daily' | 'shop'
+type Screen = 'start' | 'game' | 'result' | 'daily' | 'shop' | 'themes'
 
 const screen = ref<Screen>('start')
 const state = reactive(createInitialState())
 const adManager = AdManager.getInstance()
 const shopFreeCoinsClaimed = ref(false)
+
+// Theme & daily persistence
+const STORAGE_THEMES = 'btea_themes'
+const STORAGE_EQUIPPED = 'btea_equipped_theme'
+const STORAGE_LAST_DAILY = 'btea_last_daily'
+
+function loadThemes(): string[] {
+  try { const raw = localStorage.getItem(STORAGE_THEMES); return raw ? JSON.parse(raw) : ['classic'] } catch { return ['classic'] }
+}
+function loadEquippedTheme(): string {
+  try { return localStorage.getItem(STORAGE_EQUIPPED) ?? 'classic' } catch { return 'classic' }
+}
+function loadLastDaily(): string {
+  try { return localStorage.getItem(STORAGE_LAST_DAILY) ?? '' } catch { return '' }
+}
+
+const unlockedThemes = ref<string[]>(loadThemes())
+const equippedTheme = ref(loadEquippedTheme())
+const lastDailyDate = ref(loadLastDaily())
+const dailyRewardClaimed = ref(!isDailyRewardAvailable(lastDailyDate.value))
+
+function persistThemes() {
+  localStorage.setItem(STORAGE_THEMES, JSON.stringify(unlockedThemes.value))
+  localStorage.setItem(STORAGE_EQUIPPED, equippedTheme.value)
+}
 
 // Wire ad callbacks — mute audio and set adPlaying flag during ads
 adManager.setAdCallbacks(
@@ -173,12 +200,7 @@ function handleShopUnlock(type: 'ingredient' | 'customer', id: string, cost: num
 }
 
 function checkNewAchievements() {
-  for (const a of ACHIEVEMENTS) {
-    if (!state.achievements.includes(a.id) && a.check(state)) {
-      state.achievements.push(a.id)
-      addFloatText(state, `🏆 ${a.name}!`, '#FFD700')
-    }
-  }
+  checkAllAchievements()
 }
 
 // === Ad helpers ===
@@ -206,6 +228,74 @@ async function handleFreeCoins() {
     state.totalCoins += 50
     state.coins = state.totalCoins
     addFloatText(state, '🎬 免费50金币!', '#ffd700')
+  }
+}
+
+// === Theme handlers ===
+
+function handleBuyTheme(themeId: string) {
+  const theme = TEA_THEMES.find(t => t.id === themeId)
+  if (!theme) return
+  if (!canBuyTeaTheme(state.totalCoins, state.level, unlockedThemes.value, themeId)) {
+    addFloatText(state, '条件不满足!', '#ff6b6b')
+    return
+  }
+  state.totalCoins -= theme.cost
+  state.coins = state.totalCoins
+  unlockedThemes.value.push(themeId)
+  equippedTheme.value = themeId
+  persistThemes()
+  audioEngine.play('unlock')
+  addFloatText(state, `🎨 解锁: ${theme.name}!`, '#FFD700')
+}
+
+function handleEquipTheme(themeId: string) {
+  if (unlockedThemes.value.includes(themeId)) {
+    equippedTheme.value = themeId
+    persistThemes()
+  }
+}
+
+// === Daily reward ===
+
+function handleClaimDaily() {
+  const result = claimDailyReward(lastDailyDate.value)
+  if (result.claimed) {
+    lastDailyDate.value = result.today
+    localStorage.setItem(STORAGE_LAST_DAILY, result.today)
+    state.totalCoins += DAILY_REWARD_COINS
+    state.coins = state.totalCoins
+    dailyRewardClaimed.value = true
+    audioEngine.play('unlock')
+    addFloatText(state, `📅 每日奖励 +${DAILY_REWARD_COINS}💰`, '#FFD700')
+  }
+}
+
+// === Enhanced achievement check (includes meta achievements) ===
+
+function checkAllAchievements() {
+  // Original achievements
+  for (const a of ACHIEVEMENTS) {
+    if (!state.achievements.includes(a.id) && a.check(state)) {
+      state.achievements.push(a.id)
+      addFloatText(state, `🏆 ${a.name}!`, '#FFD700')
+    }
+  }
+  // Meta achievements
+  const stats: ServeStats = {
+    totalServed: state.totalDrinksServed,
+    perfectServed: state.perfectCount,
+    bestCombo: state.maxCombo,
+    highestLevel: state.level,
+    themesUnlocked: unlockedThemes.value.length,
+    dailyDays: lastDailyDate.value ? 1 : 0,
+  }
+  const newMeta = checkMetaAchievements(stats, state.achievements)
+  for (const a of newMeta) {
+    state.achievements.push(a.id)
+    state.totalCoins += a.reward
+    state.coins = state.totalCoins
+    addFloatText(state, `🏆 ${a.name}! +${a.reward}💰`, '#FFD700')
   }
 }
 // === Computed ===
@@ -246,11 +336,16 @@ onUnmounted(() => clearTimer(state))
     <div v-if="screen === 'start'" class="screen start-screen">
       <img src="/assets/cover.webp" alt="Bubble Tea Creator" class="cover-img">
       <h1>🧋 奶茶大师</h1>
+      <div class="coins-bar">💰 {{ state.totalCoins }}</div>
       <div class="btn-group">
         <button class="btn btn-primary" @click="goPlay">🎮 开始游戏</button>
         <button class="btn btn-daily" @click="goDaily">📅 每日挑战</button>
         <button class="btn btn-shop" @click="goShop">🛒 解锁商店</button>
+        <button class="btn btn-themes" @click="screen = 'themes'">🎨 主题商店</button>
       </div>
+      <button v-if="!dailyRewardClaimed" class="btn btn-daily-reward" @click="handleClaimDaily">
+        🎁 领取每日奖励 +{{ DAILY_REWARD_COINS }}💰
+      </button>
     </div>
 
     <!-- Daily Preview Screen -->
@@ -366,6 +461,32 @@ onUnmounted(() => clearTimer(state))
           :disabled="shopFreeCoinsClaimed"
           @click="handleFreeCoins"
         >🎬 {{ shopFreeCoinsClaimed ? '已领取' : '免费50金币' }}</button>
+        <button class="btn btn-back" @click="goStart">← 返回</button>
+      </div>
+    </div>
+
+    <!-- Themes Screen -->
+    <div v-else-if="screen === 'themes'" class="screen shop-screen">
+      <h2>🎨 主题商店</h2>
+      <div class="shop-coins">💰 {{ state.totalCoins }}</div>
+      <div class="unlock-grid">
+        <div
+          v-for="item in getAvailableTeaThemes(state.totalCoins, state.level, unlockedThemes)"
+          :key="item.theme.id"
+          class="unlock-card"
+          :class="{ unlocked: item.unlocked, locked: !item.unlocked && !item.canBuy }"
+          @click="item.canBuy ? handleBuyTheme(item.theme.id) : item.unlocked ? handleEquipTheme(item.theme.id) : null"
+        >
+          <div class="theme-preview" :style="{ background: `linear-gradient(135deg, ${item.theme.bgGradient[0]}, ${item.theme.bgGradient[1]})` }">
+            <span style="font-size:28px">{{ item.theme.emoji }}</span>
+          </div>
+          <div class="name">{{ item.theme.name }}</div>
+          <div v-if="equippedTheme === item.theme.id" class="owned">✅ 使用中</div>
+          <div v-else-if="item.unlocked" class="owned">已拥有</div>
+          <div v-else class="cost">💰 {{ item.theme.cost }} · Lv.{{ item.theme.requiredLevel }}</div>
+        </div>
+      </div>
+      <div class="btn-group">
         <button class="btn btn-back" @click="goStart">← 返回</button>
       </div>
     </div>
@@ -520,5 +641,28 @@ html, body { width: 100%; height: 100%; overflow: hidden; font-family: 'PingFang
   0% { transform: scale(0.3); opacity: 0; }
   50% { transform: scale(1.1); }
   100% { transform: scale(1); opacity: 1; }
+}
+
+/* Meta UI */
+.coins-bar {
+  font-size: 18px; font-weight: 700; color: #FFD700;
+  background: rgba(0,0,0,0.15); padding: 6px 20px; border-radius: 20px;
+  margin-bottom: 8px;
+}
+.btn-themes {
+  background: linear-gradient(135deg, #6c5ce7, #a29bfe); color: #fff;
+  font-size: 1em; padding: 12px 32px;
+}
+.btn-daily-reward {
+  background: linear-gradient(135deg, #00b894, #00cec9); color: #fff;
+  font-size: 0.9em; padding: 10px 24px; margin-top: 8px;
+  border: none; border-radius: 50px; cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0,184,148,0.3);
+}
+.btn-daily-reward:active { transform: scale(0.95); }
+.theme-preview {
+  height: 60px; border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  margin-bottom: 6px; border: 2px solid rgba(255,255,255,0.2);
 }
 </style>
