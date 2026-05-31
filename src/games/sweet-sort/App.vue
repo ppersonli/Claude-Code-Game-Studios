@@ -1,12 +1,19 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue'
 import Phaser from 'phaser'
+import { AdManager } from '../../services/AdManager'
 import { GameScene } from './scenes/GameScene'
 import { MenuScene } from './scenes/MenuScene'
 import { LevelSelectScene } from './scenes/LevelSelectScene'
 
 const gameContainer = ref<HTMLDivElement | null>(null)
+const adManager = AdManager.getInstance()
 let game: Phaser.Game | null = null
+
+adManager.setAdCallbacks(
+  () => { if (game) game.scene.pause('GameScene') },
+  () => { if (game) game.scene.resume('GameScene') },
+)
 
 onMounted(() => {
   if (!gameContainer.value) return
@@ -25,9 +32,11 @@ onMounted(() => {
   }
 
   game = new Phaser.Game(config)
+  adManager.gameplayStart()
 })
 
 onUnmounted(() => {
+  adManager.gameplayStop()
   if (game) {
     game.destroy(true)
     game = null

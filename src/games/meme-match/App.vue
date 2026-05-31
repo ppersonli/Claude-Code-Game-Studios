@@ -67,6 +67,7 @@
         </div>
       </div>
       <div class="result-actions">
+        <button class="btn btn-ad" @click="handleDoubleScore">🎬 Double Score</button>
         <button class="btn btn-primary" @click="handleRetry">🔄 Retry</button>
         <button class="btn btn-secondary" @click="handleBackToMenu">📋 Levels</button>
       </div>
@@ -76,6 +77,7 @@
 
 <script setup lang="ts">
 import { ref, reactive, onUnmounted } from 'vue'
+import { AdManager } from '../../services/AdManager'
 import { LEVELS } from './data/levels'
 import {
   createInitialState,
@@ -90,15 +92,22 @@ import ScoreBoard from './components/ScoreBoard.vue'
 
 const state = reactive(createInitialState())
 const missCardIds = ref(new Set<number>())
+const adManager = AdManager.getInstance()
 let currentLevelIndex = 0
 let timerId: ReturnType<typeof setInterval> | null = null
 let checkTimeoutId: ReturnType<typeof setTimeout> | null = null
+
+adManager.setAdCallbacks(
+  () => stopTimer(),
+  () => { if (state.status === 'playing') startTimer() },
+)
 
 function handleStart(levelIndex: number) {
   currentLevelIndex = levelIndex
   startGame(state, levelIndex)
   missCardIds.value = new Set()
   startTimer()
+  adManager.gameplayStart()
 }
 
 function handleFlip(cardId: number) {
@@ -123,6 +132,9 @@ function handleFlip(cardId: number) {
           missCardIds.value = new Set()
         }, 400)
       }
+      if (state.status === 'won') {
+        handleGameEnd()
+      }
     }, 600)
   }
 }
@@ -139,6 +151,7 @@ function startTimer() {
     const expired = tickTimer(state)
     if (expired) {
       stopTimer()
+      handleGameEnd()
     }
   }, 1000)
 }
@@ -156,6 +169,21 @@ function handleRetry() {
 
 function handleBackToMenu() {
   state.status = 'idle'
+}
+
+async function handleGameEnd() {
+  adManager.gameplayStop()
+  // Midgame ad every 3 completed levels
+  if (state.status === 'won' && currentLevelIndex > 0 && (currentLevelIndex + 1) % 3 === 0) {
+    await adManager.requestMidgameAd()
+  }
+}
+
+async function handleDoubleScore() {
+  const success = await adManager.requestRewardedAd()
+  if (success) {
+    state.score *= 2
+  }
 }
 
 onUnmounted(() => {
@@ -351,5 +379,15 @@ body {
 
 .btn-secondary:hover {
   background: rgba(255, 255, 255, 0.25);
+}
+
+.btn-ad {
+  background: linear-gradient(135deg, #e056fd, #be2edd);
+  color: white;
+}
+
+.btn-ad:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(224, 86, 253, 0.4);
 }
 </style>

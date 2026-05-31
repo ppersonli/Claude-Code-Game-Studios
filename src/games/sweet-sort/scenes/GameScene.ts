@@ -4,6 +4,7 @@ import Phaser from 'phaser'
 import { COLOR_VALUES } from '../core/Color'
 import { generateLevel, getStarRating, type LevelData } from '../core/LevelGenerator'
 import { isValidMove, executeMove, checkCompletion, getDefaultSave, updateLevelResult, type SaveData } from '../core/GameState'
+import { AdManager } from '../../../services/AdManager'
 
 const GAME_WIDTH = 480
 const GAME_HEIGHT = 854
@@ -321,7 +322,21 @@ export class GameScene extends Phaser.Scene {
       color: '#8B4513'
     }).setOrigin(0.5)
 
-    this.createButton(GAME_WIDTH / 2, GAME_HEIGHT / 2 + 60, 'Next Level', () => {
+    this.createButton(GAME_WIDTH / 2, GAME_HEIGHT / 2 + 30, '🎬 2x Stars', async () => {
+      const adManager = AdManager.getInstance()
+      const success = await adManager.requestRewardedAd()
+      if (success) {
+        const bonusStars = Math.min(3, stars * 2)
+        const bonusText = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 + 70, `⭐ ${bonusStars} Stars Recorded!`, {
+          fontSize: '18px',
+          fontFamily: 'Arial, sans-serif',
+          color: '#FFD700',
+          fontStyle: 'bold'
+        }).setOrigin(0.5)
+      }
+    }, '#9C27B0')
+
+    this.createButton(GAME_WIDTH / 2, GAME_HEIGHT / 2 + 80, 'Next Level', () => {
       this.scene.restart()
     }, '#4CAF50')
   }

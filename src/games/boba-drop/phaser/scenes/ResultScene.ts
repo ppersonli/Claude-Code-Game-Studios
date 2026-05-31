@@ -1,6 +1,7 @@
 import Phaser from 'phaser'
 import { GAME_W, GAME_H, BG_COLOR } from '../../logic/constants'
 import { loadSave } from '../../logic/save'
+import { AdManager } from '../../../../services/AdManager'
 
 export class ResultScene extends Phaser.Scene {
   constructor() {
@@ -10,6 +11,8 @@ export class ResultScene extends Phaser.Scene {
   create(data: { score?: number }): void {
     const score = data.score ?? 0
     const save = loadSave()
+    const adManager = AdManager.getInstance()
+    let rewarded = false
 
     this.cameras.main.setBackgroundColor(BG_COLOR)
 
@@ -26,7 +29,7 @@ export class ResultScene extends Phaser.Scene {
       })
       .setOrigin(0.5)
 
-    this.add
+    const scoreText = this.add
       .text(GAME_W / 2, 280, `Score: ${score}`, {
         fontSize: '36px',
         fontFamily: 'Arial, sans-serif',
@@ -43,13 +46,41 @@ export class ResultScene extends Phaser.Scene {
       })
       .setOrigin(0.5)
 
+    // Rewarded ad: 2x score button
+    const rewardBtnGfx = this.add.graphics()
+    rewardBtnGfx.fillStyle(0xe056fd, 1)
+    rewardBtnGfx.fillRoundedRect(GAME_W / 2 - 90, 370, 180, 45, 12)
+
+    const rewardText = this.add
+      .text(GAME_W / 2, 392, '🎬 2x Score', {
+        fontSize: '22px',
+        fontFamily: 'Arial, sans-serif',
+        color: '#FFFFFF',
+        fontStyle: 'bold',
+      })
+      .setOrigin(0.5)
+
+    const rewardZone = this.add.zone(GAME_W / 2, 392, 180, 45).setInteractive()
+    rewardZone.on('pointerdown', async () => {
+      if (rewarded) return
+      const success = await adManager.requestRewardedAd()
+      if (success) {
+        rewarded = true
+        scoreText.setText(`Score: ${score * 2}`)
+        rewardBtnGfx.clear()
+        rewardBtnGfx.fillStyle(0x666666, 1)
+        rewardBtnGfx.fillRoundedRect(GAME_W / 2 - 90, 370, 180, 45, 12)
+        rewardText.setText('✅ Claimed')
+      }
+    })
+
     // Play Again button
     const btnGfx = this.add.graphics()
     btnGfx.fillStyle(0xffd700, 1)
-    btnGfx.fillRoundedRect(GAME_W / 2 - 90, 400, 180, 60, 15)
+    btnGfx.fillRoundedRect(GAME_W / 2 - 90, 440, 180, 60, 15)
 
     this.add
-      .text(GAME_W / 2, 430, '▶ Play Again', {
+      .text(GAME_W / 2, 470, '▶ Play Again', {
         fontSize: '28px',
         fontFamily: 'Arial, sans-serif',
         color: '#3E2723',
@@ -57,14 +88,14 @@ export class ResultScene extends Phaser.Scene {
       })
       .setOrigin(0.5)
 
-    const playZone = this.add.zone(GAME_W / 2, 430, 180, 60).setInteractive()
+    const playZone = this.add.zone(GAME_W / 2, 470, 180, 60).setInteractive()
     playZone.on('pointerdown', () => {
       this.scene.start('GameScene')
     })
 
     // Menu button
     const menuBtn = this.add
-      .text(GAME_W / 2, 510, '🏠 Menu', {
+      .text(GAME_W / 2, 540, '🏠 Menu', {
         fontSize: '24px',
         fontFamily: 'Arial, sans-serif',
         color: '#CE93D8',

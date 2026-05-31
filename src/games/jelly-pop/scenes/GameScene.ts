@@ -38,6 +38,7 @@ import {
   saveHighScore,
 } from '../core'
 import { AdManager } from '../services/AdManager'
+import { AdManager as SharedAdManager } from '../../../services/AdManager'
 
 /**
  * GameScene – the main Jelly Pop gameplay scene.
@@ -672,12 +673,14 @@ export class GameScene extends Phaser.Scene {
       message = 'So close! Only ' + diff + ' away!'
     }
 
+    const gameOverGroup = this.add.container(0, 0).setDepth(90)
+
     const overlay = this.add.graphics()
     overlay.fillStyle(0x000000, 0.6)
     overlay.fillRect(0, 0, GAME_W, GAME_H)
-    overlay.setDepth(90)
+    gameOverGroup.add(overlay)
 
-    this.add
+    const titleText = this.add
       .text(GAME_W / 2, GAME_H / 2 - 80, message, {
         fontSize: '32px',
         fontFamily: 'Arial',
@@ -686,33 +689,33 @@ export class GameScene extends Phaser.Scene {
         strokeThickness: 4,
       })
       .setOrigin(0.5)
-      .setDepth(100)
+    gameOverGroup.add(titleText)
 
-    this.add
+    const scoreLabel = this.add
       .text(GAME_W / 2, GAME_H / 2 - 30, 'Score: ' + this.state.score, {
         fontSize: '24px',
         fontFamily: 'Arial',
         color: '#ffffff',
       })
       .setOrigin(0.5)
-      .setDepth(100)
+    gameOverGroup.add(scoreLabel)
 
-    this.add
+    const bestLabel = this.add
       .text(GAME_W / 2, GAME_H / 2 + 5, 'Best: ' + this.state.highScore, {
         fontSize: '18px',
         fontFamily: 'Arial',
         color: '#ffccdd',
       })
       .setOrigin(0.5)
-      .setDepth(100)
+    gameOverGroup.add(bestLabel)
 
     // Try Again button
     const btnGfx = this.add.graphics()
     btnGfx.fillStyle(0xff6688, 1)
     btnGfx.fillRoundedRect(GAME_W / 2 - 80, GAME_H / 2 + 40, 160, 50, 12)
-    btnGfx.setDepth(100)
+    gameOverGroup.add(btnGfx)
 
-    this.add
+    const btnText = this.add
       .text(GAME_W / 2, GAME_H / 2 + 65, 'Try Again', {
         fontSize: '22px',
         fontFamily: 'Arial',
@@ -721,11 +724,43 @@ export class GameScene extends Phaser.Scene {
         strokeThickness: 2,
       })
       .setOrigin(0.5)
-      .setDepth(101)
+    gameOverGroup.add(btnText)
 
-    const btnZone = this.add.zone(GAME_W / 2, GAME_H / 2 + 65, 160, 50).setDepth(102)
+    const btnZone = this.add.zone(GAME_W / 2, GAME_H / 2 + 65, 160, 50)
     btnZone.setInteractive()
     btnZone.on('pointerdown', () => this.restartGame())
+    gameOverGroup.add(btnZone)
+
+    // Rewarded ad: +5 moves to continue
+    const rewardBtnGfx = this.add.graphics()
+    rewardBtnGfx.fillStyle(0xe056fd, 1)
+    rewardBtnGfx.fillRoundedRect(GAME_W / 2 - 80, GAME_H / 2 + 100, 160, 40, 10)
+    gameOverGroup.add(rewardBtnGfx)
+
+    const rewardBtnText = this.add
+      .text(GAME_W / 2, GAME_H / 2 + 120, '🎬 +5 Moves', {
+        fontSize: '18px',
+        fontFamily: 'Arial',
+        color: '#ffffff',
+        fontStyle: 'bold',
+      })
+      .setOrigin(0.5)
+    gameOverGroup.add(rewardBtnText)
+
+    const rewardZone = this.add.zone(GAME_W / 2, GAME_H / 2 + 120, 160, 40)
+    rewardZone.setInteractive()
+    rewardZone.on('pointerdown', async () => {
+      const adManager = SharedAdManager.getInstance()
+      const success = await adManager.requestRewardedAd()
+      if (success) {
+        this.state.movesLeft += 5
+        this.state.gameOver = false
+        this.isAnimating = false
+        gameOverGroup.destroy()
+        this.updateUI()
+      }
+    })
+    gameOverGroup.add(rewardZone)
 
     this.showAd()
   }

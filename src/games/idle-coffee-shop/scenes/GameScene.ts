@@ -22,6 +22,7 @@ import {
   loadGameState,
   saveGameState,
 } from '../composables/useGameLogic'
+import { AdManager } from '../../../services/AdManager'
 
 const GAME_W = 480
 const GAME_H = 854
@@ -303,6 +304,28 @@ export class GameScene extends Phaser.Scene {
       }
     }
     if (!hasEmployees) this.addToTab(this.add.text(30, y, 'None yet — hire from Staff tab!', smallStyle))
+
+    // Rewarded ad: free cash
+    y = 760
+    const rewardBtn = this.add.graphics()
+    rewardBtn.fillStyle(0xe056fd, 1)
+    rewardBtn.fillRoundedRect(GAME_W / 2 - 70, y, 140, 32, 8)
+    this.addToTab(rewardBtn)
+    const rewardLabel = this.add.text(GAME_W / 2, y + 16, '🎬 Free Cash', { fontSize: '13px', fontFamily: 'Arial', fontStyle: 'bold', color: '#FFFFFF' }).setOrigin(0.5).setInteractive()
+    rewardLabel.on('pointerdown', async () => {
+      const adManager = AdManager.getInstance()
+      const success = await adManager.requestRewardedAd()
+      if (success) {
+        const bonus = Math.max(50, Math.floor(this.state.money * 0.1))
+        this.state.money += bonus
+        this.state.totalEarned += bonus
+        saveGameState(this.state)
+        this.updateUI()
+        this.switchTab(this.currentTab)
+        this.spawnMoneyPopup(GAME_W / 2, y, '+' + formatMoney(bonus))
+      }
+    })
+    this.addToTab(rewardLabel)
 
     y = 800
     const brewBtn = this.add.graphics()
