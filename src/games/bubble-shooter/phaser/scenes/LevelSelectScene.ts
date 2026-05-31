@@ -1,7 +1,9 @@
 import Phaser from 'phaser'
 import { GAME_W, GAME_H } from '../../logic/constants'
-import { loadSave } from '../../logic/save'
+import { loadSave, saveFull } from '../../logic/save'
 import { getLevelConfig } from '../../logic/levels'
+import { isDailyRewardAvailable, claimDailyReward, dailyRewardCoins, checkShooterAchievements, type ShooterStats } from '../../logic/meta'
+import { SHOOTER_ACHIEVEMENTS } from '../../data/achievements'
 
 export class LevelSelectScene extends Phaser.Scene {
   constructor() {
@@ -14,19 +16,37 @@ export class LevelSelectScene extends Phaser.Scene {
 
     this.cameras.main.setBackgroundColor(0x2d1b4e)
 
-    this.add.text(GAME_W / 2, 50, '🧋 选择关卡', {
+    this.add.text(GAME_W / 2, 45, '🧋 选择关卡', {
       fontSize: '28px', fontFamily: 'Arial', color: '#FFD700', fontStyle: 'bold',
     }).setOrigin(0.5)
 
-    if (save.highScore > 0) {
-      this.add.text(GAME_W / 2, 85, `🏆 最高分: ${save.highScore}`, {
-        fontSize: '16px', fontFamily: 'Arial', color: '#CE93D8',
-      }).setOrigin(0.5)
+    // Stats bar
+    this.add.text(GAME_W / 2, 75, `💰 ${save.coins}  |  🏆 ${save.highScore}  |  🏅 ${save.levelsCompleted.length}/50  |  🏆 ${save.achievements.length}/${SHOOTER_ACHIEVEMENTS.length}`, {
+      fontSize: '12px', fontFamily: 'Arial', color: '#CE93D8',
+    }).setOrigin(0.5)
+
+    // Daily reward button
+    if (isDailyRewardAvailable(save.lastDailyDate)) {
+      const dailyBtn = this.add.text(GAME_W / 2, 95, `🎁 每日奖励 +${dailyRewardCoins()}💰`, {
+        fontSize: '13px', fontFamily: 'Arial', color: '#00b894', fontStyle: 'bold',
+        backgroundColor: '#1a3a2a', padding: { x: 10, y: 4 },
+      }).setOrigin(0.5).setInteractive()
+      dailyBtn.on('pointerdown', () => {
+        const result = claimDailyReward(save.lastDailyDate)
+        if (result.claimed) {
+          save.lastDailyDate = result.today
+          save.stats.dailyCompleted++
+          save.coins += dailyRewardCoins()
+          saveFull(save)
+          dailyBtn.setText('✅ 已领取').setColor('#666').disableInteractive()
+          this.checkAchievements()
+        }
+      })
     }
 
     const cols = 5
     const startX = 55
-    const startY = 120
+    const startY = 115
     const spacing = 78
 
     for (let i = 1; i <= 50; i++) {
@@ -66,5 +86,15 @@ export class LevelSelectScene extends Phaser.Scene {
     }).setOrigin(0.5).setInteractive().on('pointerdown', () => {
       this.scene.start('LevelSelectScene')
     })
+  }
+
+  private checkAchievements(): void {
+    const save = loadSave()
+    const newAchievements = checkShooterAchievements(save.stats, save.achievements)
+    for (const a of newAchievements) {
+      save.achievements.push(a.id)
+      save.coins += a.reward
+    }
+    if (newAchievements.length > 0) saveFull(save)
   }
 }

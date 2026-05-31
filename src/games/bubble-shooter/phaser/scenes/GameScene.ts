@@ -3,7 +3,8 @@ import { GAME_W, GAME_H, LAUNCHER_X, LAUNCHER_Y, BUBBLE_RADIUS, SHOOT_SPEED, GRI
 import { getColorById, BUBBLE_COLORS } from '../../data/colors'
 import { getCellCenter, getNearestCell, type Grid } from '../../logic/grid'
 import { createLevelState, shootBubble, type GameState } from '../../logic/game-state'
-import { saveProgress, loadSave } from '../../logic/save'
+import { saveProgress, loadSave, saveFull } from '../../logic/save'
+import { levelCoins } from '../../logic/meta'
 
 export class GameScene extends Phaser.Scene {
   private state!: GameState
@@ -17,6 +18,9 @@ export class GameScene extends Phaser.Scene {
   private levelText!: Phaser.GameObjects.Text
   private isAnimating = false
   private shootingBubble: { gfx: Phaser.GameObjects.Graphics; vx: number; vy: number } | null = null
+  private sessionPopped = 0
+  private sessionFallen = 0
+  private sessionShots = 0
 
   constructor() {
     super({ key: 'GameScene' })
@@ -28,6 +32,9 @@ export class GameScene extends Phaser.Scene {
     this.state = createLevelState(level, save.highScore, save.levelsCompleted)
     this.isAnimating = false
     this.shootingBubble = null
+    this.sessionPopped = 0
+    this.sessionFallen = 0
+    this.sessionShots = 0
 
     this.drawBackground()
     this.createHUD()
@@ -206,6 +213,9 @@ export class GameScene extends Phaser.Scene {
       const target = hitBubble ? this.findEmptyNeighbor(cell.row, cell.col, gfx.x, gfx.y) : cell
       if (target && this.state.grid[target.row]?.[target.col] === null) {
         const result = shootBubble(this.state, target.row, target.col)
+        this.sessionPopped += result.popped
+        this.sessionFallen += result.fallen
+        this.sessionShots++
 
         // Pop animation
         if (result.popped > 0 || result.fallen > 0) {
@@ -233,17 +243,21 @@ export class GameScene extends Phaser.Scene {
       // Check end conditions
       if (this.state.levelComplete) {
         const save = loadSave()
+        this.updateMetaStats(save, true)
         saveProgress(this.state.totalScore, this.state.level, this.state.levelsCompleted)
+        const earnedCoins = levelCoins(true, this.state.shotsLeft, this.state.maxShots)
         this.time.delayedCall(500, () => {
           this.scene.start('ResultScene', {
             level: this.state.level,
             score: this.state.totalScore,
             won: true,
             highScore: Math.max(save.highScore, this.state.totalScore),
+            coins: earnedCoins,
           })
         })
       } else if (this.state.gameOver) {
         const save = loadSave()
+        this.updateMetaStats(save, false)
         saveProgress(this.state.totalScore, this.state.level, this.state.levelsCompleted)
         this.time.delayedCall(500, () => {
           this.scene.start('ResultScene', {
@@ -251,6 +265,7 @@ export class GameScene extends Phaser.Scene {
             score: this.state.totalScore,
             won: false,
             highScore: Math.max(save.highScore, this.state.totalScore),
+            coins: 0,
           })
         })
       } else {
@@ -335,5 +350,22 @@ export class GameScene extends Phaser.Scene {
         onComplete: () => p.destroy(),
       })
     }
+  }
+
+  private updateMetaStats(save: ReturnType<typeof loadSave>, won: boolean): void {
+    save.stats.totalPopped += this.sessionPopped
+    save.stats.totalFallen += this.sessionFallen
+    save.stats.totalShots += this.sessionShots
+    save.stats.highScore = Math.max(save.stats.highScore, this.state.totalScore)
+    save.stats.levelsCompleted = save.levelsCompleted.length + (won ? 1 : 0)
+    save.stats.maxLevel = Math.max(save.stats.maxLevel, this.state.level)
+    if (won && this.sessionShots === this.state.maxShots - this.state.shotsLeft) {
+      // All shots used efficiently (no misses tracked by shotsLeft == maxShots - shotsFired)
+    }
+    if (won && this.state.shotsLeft === this.state.maxShots) {
+      save.stats.perfectLevels++
+    }
+    save.coins += levelCoins(won, this.state.shotsLeft, this.state.maxShots)
+    saveFull(save)
   }
 }

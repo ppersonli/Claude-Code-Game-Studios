@@ -7,11 +7,12 @@ export class ResultScene extends Phaser.Scene {
     super('ResultScene')
   }
 
-  create(data: { level?: number; score?: number; won?: boolean; highScore?: number }): void {
+  create(data: { level?: number; score?: number; won?: boolean; highScore?: number; coins?: number }): void {
     const level = data.level ?? 1
     const score = data.score ?? 0
     const won = data.won ?? false
     const highScore = data.highScore ?? 0
+    const coins = data.coins ?? 0
     const adManager = AdManager.getInstance()
     let rewarded = false
 
@@ -37,6 +38,12 @@ export class ResultScene extends Phaser.Scene {
     this.add.text(GAME_W / 2, 330, `最高分: ${highScore}`, {
       fontSize: '16px', fontFamily: 'Arial', color: '#CE93D8',
     }).setOrigin(0.5)
+
+    if (coins > 0) {
+      this.add.text(GAME_W / 2, 355, `💰 +${coins} 金币`, {
+        fontSize: '16px', fontFamily: 'Arial', color: '#FFD700',
+      }).setOrigin(0.5)
+    }
 
     // Rewarded ad: 2x score
     const rewardBtnGfx = this.add.graphics()
