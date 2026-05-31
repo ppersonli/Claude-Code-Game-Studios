@@ -14,7 +14,8 @@ import {
   BG_COLOR,
   WALL_THICKNESS,
 } from '../../logic/constants'
-import { loadSave, updateHighScore } from '../../logic/save'
+import { loadSave, saveSave, updateHighScore } from '../../logic/save'
+import { onMerge, onGameEnd, type DropSaveData } from '../../logic/meta'
 import { calculateMergeScore } from '../../logic/scoring'
 import {
   getRandomLevel,
@@ -39,6 +40,8 @@ export class GameScene extends Phaser.Scene {
   private gameOver = false
   private nextLevel = 0
   private merging = new Set<Phaser.GameObjects.Graphics>()
+  private dropSave!: DropSaveData
+  private isDaily = false
   private cupGfx!: Phaser.GameObjects.Graphics
   private scoreText!: Phaser.GameObjects.Text
   private nextPreviewGfx!: Phaser.GameObjects.Graphics
@@ -48,7 +51,7 @@ export class GameScene extends Phaser.Scene {
     super('GameScene')
   }
 
-  create(): void {
+  create(data?: { isDaily?: boolean }): void {
     this.cameras.main.setBackgroundColor(BG_COLOR)
     this.score = 0
     this.ingredients = []
@@ -57,6 +60,8 @@ export class GameScene extends Phaser.Scene {
     this.gameOver = false
     this.nextLevel = getRandomLevel()
     this.merging = new Set()
+    this.dropSave = loadSave()
+    this.isDaily = data?.isDaily ?? false
 
     // Background bubbles
     for (let i = 0; i < 10; i++) {
@@ -375,10 +380,12 @@ export class GameScene extends Phaser.Scene {
       ease: 'Back.easeOut',
     })
 
-    // Score
+    // Score + coins
     const pts = calculateMergeScore(levelA)
     this.score += pts
-    this.scoreText.setText(`Score: ${this.score}`)
+    const earnedCoins = onMerge(this.dropSave, newLevel, this.ingredients.length)
+    saveSave(this.dropSave)
+    this.scoreText.setText(`Score: ${this.score} 💰${this.dropSave.coins}`)
   }
 
   private mergeParticles(x: number, y: number, color: number): void {
@@ -449,7 +456,8 @@ export class GameScene extends Phaser.Scene {
   private triggerGameOver(): void {
     this.gameOver = true
 
-    const save = updateHighScore(this.score)
+    const gameResult = onGameEnd(this.dropSave, this.score, this.isDaily)
+    saveSave(this.dropSave)
 
     this.cameras.main.shake(500, 0.01)
     for (const gfx of this.ingredients) {
@@ -463,7 +471,13 @@ export class GameScene extends Phaser.Scene {
     }
 
     this.time.delayedCall(1500, () => {
-      this.scene.start('ResultScene', { score: this.score })
+      this.scene.start('ResultScene', {
+        score: this.score,
+        highScore: this.dropSave.highScore,
+        scoreCoins: gameResult.scoreCoins,
+        dailyCoins: gameResult.dailyCoins,
+        newAchievements: gameResult.newAchievements.map(a => ({ name: a.name, emoji: a.emoji, reward: a.reward })),
+      })
     })
   }
 

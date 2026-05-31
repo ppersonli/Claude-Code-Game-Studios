@@ -1,6 +1,7 @@
 import Phaser from 'phaser'
 import { GAME_W, GAME_H, BG_COLOR } from '../../logic/constants'
 import { loadSave } from '../../logic/save'
+import { isDailyAvailable } from '../../logic/meta'
 import { drawIngredient } from '../helpers'
 import { INGREDIENTS } from '../../data/ingredients'
 
@@ -29,58 +30,50 @@ export class MenuScene extends Phaser.Scene {
     }
 
     // Title
-    this.add
-      .text(GAME_W / 2, 200, 'BOBA', {
-        fontSize: '72px',
-        fontFamily: 'Arial, sans-serif',
-        color: '#FFD700',
-        fontStyle: 'bold',
-      })
-      .setOrigin(0.5)
+    this.add.text(GAME_W / 2, 180, 'BOBA', {
+      fontSize: '72px', fontFamily: 'Arial, sans-serif', color: '#FFD700', fontStyle: 'bold',
+    }).setOrigin(0.5)
 
-    this.add
-      .text(GAME_W / 2, 280, 'DROP', {
-        fontSize: '72px',
-        fontFamily: 'Arial, sans-serif',
-        color: '#FF9800',
-        fontStyle: 'bold',
-      })
-      .setOrigin(0.5)
+    this.add.text(GAME_W / 2, 260, 'DROP', {
+      fontSize: '72px', fontFamily: 'Arial, sans-serif', color: '#FF9800', fontStyle: 'bold',
+    }).setOrigin(0.5)
 
-    this.add
-      .text(GAME_W / 2, 340, '🧋 Bubble Tea Merge Game', {
-        fontSize: '20px',
-        fontFamily: 'Arial, sans-serif',
-        color: '#CE93D8',
-      })
-      .setOrigin(0.5)
+    this.add.text(GAME_W / 2, 320, '🧋 Bubble Tea Merge Game', {
+      fontSize: '20px', fontFamily: 'Arial, sans-serif', color: '#CE93D8',
+    }).setOrigin(0.5)
 
-    this.add
-      .text(GAME_W / 2, 400, `High Score: ${save.highScore}`, {
-        fontSize: '24px',
-        fontFamily: 'Arial, sans-serif',
-        color: '#FFFFFF',
-      })
-      .setOrigin(0.5)
+    // Coins + stats bar
+    this.add.text(GAME_W / 2, 360, `💰 ${save.coins}  |  🏆 Best: ${save.highScore}  |  🔮 ${save.stats.totalMerges} merges`, {
+      fontSize: '14px', fontFamily: 'Arial, sans-serif', color: '#FFD700',
+    }).setOrigin(0.5)
 
     // Play button
     const btnGfx = this.add.graphics()
     btnGfx.fillStyle(0xffd700, 1)
-    btnGfx.fillRoundedRect(GAME_W / 2 - 80, 460, 160, 60, 15)
+    btnGfx.fillRoundedRect(GAME_W / 2 - 80, 400, 160, 55, 15)
 
-    this.add
-      .text(GAME_W / 2, 490, '▶ Play', {
-        fontSize: '32px',
-        fontFamily: 'Arial, sans-serif',
-        color: '#3E2723',
-        fontStyle: 'bold',
-      })
-      .setOrigin(0.5)
+    this.add.text(GAME_W / 2, 427, '▶ Play', {
+      fontSize: '30px', fontFamily: 'Arial, sans-serif', color: '#3E2723', fontStyle: 'bold',
+    }).setOrigin(0.5)
 
-    const playZone = this.add.zone(GAME_W / 2, 490, 160, 60).setInteractive()
-    playZone.on('pointerdown', () => {
+    this.add.zone(GAME_W / 2, 427, 160, 55).setInteractive().on('pointerdown', () => {
       this.scene.start('GameScene')
     })
+
+    // Daily challenge button
+    if (isDailyAvailable(save)) {
+      const dailyGfx = this.add.graphics()
+      dailyGfx.fillStyle(0xFF8C00, 1)
+      dailyGfx.fillRoundedRect(GAME_W / 2 - 80, 470, 160, 40, 10)
+
+      this.add.text(GAME_W / 2, 490, '📅 Daily (+50💰)', {
+        fontSize: '16px', fontFamily: 'Arial, sans-serif', color: '#fff', fontStyle: 'bold',
+      }).setOrigin(0.5)
+
+      this.add.zone(GAME_W / 2, 490, 160, 40).setInteractive().on('pointerdown', () => {
+        this.scene.start('GameScene', { isDaily: true })
+      })
+    }
 
     // Floating ingredients
     for (let i = 0; i < INGREDIENTS.length; i++) {
