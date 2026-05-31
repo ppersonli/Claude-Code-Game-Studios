@@ -8,6 +8,10 @@
           <h1 class="game-title">珍珠奶茶排序</h1>
           <p class="game-subtitle">Boba Sort</p>
         </div>
+        <div class="meta-bar">
+          <span class="coins-display">💰 {{ progress.coins }}</span>
+          <span class="stars-display">⭐ {{ totalStars }}</span>
+        </div>
         <div class="start-buttons">
           <button class="btn btn-primary" @click="startGame(0)">
             🎮 開始遊戲
@@ -15,6 +19,10 @@
           <button class="btn btn-daily" @click="startDailyChallenge()">
             📅 每日挑戰
           </button>
+          <div class="meta-buttons">
+            <button class="btn btn-shop" @click="screen = 'shop'">🎨 主題商店</button>
+            <button class="btn btn-achievements" @click="screen = 'achievements'">🏆 成就</button>
+          </div>
           <div class="level-select">
             <h3>選擇關卡</h3>
             <div class="level-grid">
@@ -138,6 +146,10 @@
             <span>×{{ getComboMultiplier(state.maxCombo) }}</span>
           </div>
         </div>
+        <div v-if="state.won" class="coins-earned">
+          💰 +{{ resultCoins.level }} 關卡金幣
+          <span v-if="resultCoins.daily > 0"> + {{ resultCoins.daily }} 每日獎勵</span>
+        </div>
         <div class="result-buttons">
           <button class="btn btn-primary" @click="handleNext()">
             ➡ 下一關
@@ -153,6 +165,66 @@
       <!-- Celebration particles -->
       <div v-if="state.won" class="particles">
         <div v-for="i in 20" :key="i" class="particle" :style="particleStyle(i)" />
+      </div>
+    </div>
+
+    <!-- ==================== SHOP SCREEN ==================== -->
+    <div v-if="screen === 'shop'" class="screen shop-screen">
+      <div class="shop-content">
+        <h2>🎨 主題商店</h2>
+        <div class="shop-coins">💰 {{ progress.coins }}</div>
+        <div class="theme-grid">
+          <div
+            v-for="item in getAvailableThemes(progress)"
+            :key="item.theme.id"
+            class="theme-card"
+            :class="{ unlocked: item.unlocked, equipped: progress.equippedTheme === item.theme.id, 'can-buy': item.canBuy }"
+            @click="item.canBuy ? handleBuyTheme(item.theme.id) : item.unlocked ? handleEquipTheme(item.theme.id) : null"
+          >
+            <div class="theme-preview" :style="{ background: item.theme.bgColor || 'rgba(255,255,255,0.1)', borderColor: item.theme.tubeBorder }">
+              <span class="theme-emoji">{{ item.theme.emoji }}</span>
+            </div>
+            <div class="theme-name">{{ item.theme.name }}</div>
+            <div v-if="progress.equippedTheme === item.theme.id" class="theme-status">✅ 使用中</div>
+            <div v-else-if="item.unlocked" class="theme-status">已擁有</div>
+            <div v-else class="theme-cost">💰 {{ item.theme.cost }} · ⭐ {{ item.theme.requiredStars }}</div>
+          </div>
+        </div>
+        <button class="btn btn-secondary" @click="screen = 'start'">← 返回</button>
+      </div>
+    </div>
+
+    <!-- ==================== ACHIEVEMENTS SCREEN ==================== -->
+    <div v-if="screen === 'achievements'" class="screen achievements-screen">
+      <div class="achievements-content">
+        <h2>🏆 成就</h2>
+        <div class="achievement-list">
+          <div
+            v-for="a in ACHIEVEMENTS"
+            :key="a.id"
+            class="achievement-row"
+            :class="{ unlocked: progress.achievements.includes(a.id) }"
+          >
+            <span class="achievement-icon">{{ a.emoji }}</span>
+            <div class="achievement-info">
+              <div class="achievement-name">{{ a.name }}</div>
+              <div class="achievement-desc">{{ a.description }}</div>
+            </div>
+            <div class="achievement-reward">
+              <span v-if="progress.achievements.includes(a.id)">✅</span>
+              <span v-else>💰 {{ a.reward }}</span>
+            </div>
+          </div>
+        </div>
+        <button class="btn btn-secondary" @click="screen = 'start'">← 返回</button>
+      </div>
+    </div>
+
+    <!-- Achievement notification overlay -->
+    <div v-if="achievementNotif" class="achievement-notif">
+      <div class="notif-content">
+        <span class="notif-emoji">{{ achievementNotif.emoji }}</span>
+        <span class="notif-text">{{ achievementNotif.name }} +💰{{ achievementNotif.reward }}</span>
       </div>
     </div>
   </div>
@@ -174,9 +246,12 @@ import {
   type SortState,
 } from './composables/useGameLogic'
 import { SORT_LEVELS } from './data/levels'
+import { THEMES } from './data/themes'
+import { ACHIEVEMENTS } from './data/achievements'
+import { type Progress, createDefaultProgress, onGameComplete, canBuyTheme, buyTheme, equipTheme, getEquippedTheme, getAvailableThemes, canBuyHint, buyHint, HINT_COST } from './composables/useMeta'
 import TubeGrid from './components/TubeGrid.vue'
 
-type Screen = 'start' | 'game' | 'result'
+type Screen = 'start' | 'game' | 'result' | 'shop' | 'achievements'
 
 const screen = ref<Screen>('start')
 const state = reactive<SortState>(createLevel(0))
@@ -192,21 +267,32 @@ const hintTo = ref<number | null>(null)
 let timerInterval: ReturnType<typeof setInterval> | null = null
 let pourTimeout: ReturnType<typeof setTimeout> | null = null
 
+const achievementNotif = ref<{ name: string; emoji: string; reward: number } | null>(null)
+const resultCoins = ref({ level: 0, daily: 0 })
+
 // Persistence
 const STORAGE_KEY = 'boba_sort_progress'
-interface Progress {
-  totalStars: number
-  levelStars: number[]
-  dailyCompleted: string[]
-}
 const progress = reactive<Progress>(loadProgress())
 
 function loadProgress(): Progress {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
-    if (raw) return JSON.parse(raw)
+    if (raw) {
+      const data = JSON.parse(raw)
+      const defaults = createDefaultProgress()
+      return {
+        totalStars: data.totalStars ?? 0,
+        levelStars: Array.isArray(data.levelStars) ? data.levelStars : [],
+        dailyCompleted: Array.isArray(data.dailyCompleted) ? data.dailyCompleted : [],
+        coins: data.coins ?? 0,
+        unlockedThemes: Array.isArray(data.unlockedThemes) ? data.unlockedThemes : ['classic'],
+        equippedTheme: data.equippedTheme ?? 'classic',
+        achievements: Array.isArray(data.achievements) ? data.achievements : [],
+        stats: { ...defaults.stats, ...(data.stats ?? {}) },
+      }
+    }
   } catch { /* ignore */ }
-  return { totalStars: 0, levelStars: [], dailyCompleted: [] }
+  return createDefaultProgress()
 }
 
 function saveProgress(): void {
@@ -307,20 +393,18 @@ function endGame(): void {
   adManager.gameplayStop()
   screen.value = 'result'
 
-  // Update progress
   if (state.won) {
-    const prev = progress.levelStars[currentLevelIndex.value] ?? 0
-    if (state.stars > prev) {
-      progress.levelStars[currentLevelIndex.value] = state.stars
-    }
-    // Recalculate total stars
-    progress.totalStars = progress.levelStars.reduce((sum, s) => sum + (s ?? 0), 0)
+    const result = onGameComplete(
+      progress, state.stars, state.score, state.maxCombo,
+      state.timeElapsed, currentLevelIndex.value, isDaily.value,
+    )
+    resultCoins.value = { level: result.levelCoins, daily: result.dailyCoins }
 
-    if (isDaily.value) {
-      const today = new Date().toISOString().slice(0, 10)
-      if (!progress.dailyCompleted.includes(today)) {
-        progress.dailyCompleted.push(today)
-      }
+    // Show achievement notifications
+    if (result.newAchievements.length > 0) {
+      const first = result.newAchievements[0]
+      achievementNotif.value = { name: first.name, emoji: first.emoji, reward: first.reward }
+      setTimeout(() => { achievementNotif.value = null }, 3000)
     }
     saveProgress()
   }
@@ -421,6 +505,23 @@ function handleNext(): void {
 
 function handleRetry(): void {
   startGame(currentLevelIndex.value)
+}
+
+// === Theme & Achievement handlers ===
+
+function handleBuyTheme(themeId: string): void {
+  if (buyTheme(progress, themeId)) {
+    audioEngine.play('unlock')
+    currentTheme.value = getEquippedTheme(progress).bgColor ? 'theme-active' : ''
+    saveProgress()
+  }
+}
+
+function handleEquipTheme(themeId: string): void {
+  if (equipTheme(progress, themeId)) {
+    currentTheme.value = getEquippedTheme(progress).bgColor ? 'theme-active' : ''
+    saveProgress()
+  }
 }
 
 // === Particles ===
@@ -871,5 +972,137 @@ html, body, #app {
     transform: translateY(100vh) rotate(720deg);
     opacity: 0;
   }
+}
+
+/* Meta UI */
+.meta-bar {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+  margin-bottom: 8px;
+}
+.coins-display, .stars-display {
+  font-size: 16px;
+  font-weight: 700;
+  color: #FFD700;
+  background: rgba(0,0,0,0.2);
+  padding: 4px 14px;
+  border-radius: 20px;
+}
+.meta-buttons {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+}
+.btn-shop {
+  background: linear-gradient(135deg, #6c5ce7, #a29bfe);
+  color: #fff;
+  flex: 1;
+}
+.btn-achievements {
+  background: linear-gradient(135deg, #ffd93d, #f0932b);
+  color: #fff;
+  flex: 1;
+}
+.coins-earned {
+  text-align: center;
+  font-size: 16px;
+  font-weight: 700;
+  color: #FFD700;
+  margin-bottom: 12px;
+}
+
+/* Shop screen */
+.shop-screen {
+  background: linear-gradient(135deg, #1a1a2e, #2d1b4e);
+}
+.shop-content {
+  text-align: center;
+  width: 100%;
+  max-width: 400px;
+  padding: 24px 0;
+}
+.shop-content h2 { color: #fff; margin-bottom: 8px; }
+.shop-coins { font-size: 20px; color: #FFD700; font-weight: 700; margin-bottom: 16px; }
+.theme-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.theme-card {
+  padding: 12px;
+  border-radius: 14px;
+  background: rgba(255,255,255,0.08);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.theme-card:active { transform: scale(0.96); }
+.theme-card.equipped { border: 2px solid #4CAF50; }
+.theme-card.can-buy { border: 2px solid #FFD700; }
+.theme-card:not(.unlocked):not(.can-buy) { opacity: 0.4; cursor: not-allowed; }
+.theme-preview {
+  height: 50px;
+  border-radius: 8px;
+  border: 2px solid rgba(255,255,255,0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 6px;
+}
+.theme-emoji { font-size: 24px; }
+.theme-name { font-size: 13px; color: #fff; font-weight: 600; }
+.theme-status { font-size: 11px; color: #4CAF50; }
+.theme-cost { font-size: 11px; color: #FFD700; }
+
+/* Achievements screen */
+.achievements-screen {
+  background: linear-gradient(135deg, #1a1a2e, #2d1b4e);
+}
+.achievements-content {
+  width: 100%;
+  max-width: 400px;
+  padding: 24px 0;
+}
+.achievements-content h2 { color: #fff; text-align: center; margin-bottom: 16px; }
+.achievement-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px; }
+.achievement-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(255,255,255,0.06);
+}
+.achievement-row.unlocked { background: rgba(76,175,80,0.15); }
+.achievement-icon { font-size: 24px; }
+.achievement-info { flex: 1; text-align: left; }
+.achievement-name { font-size: 13px; color: #fff; font-weight: 600; }
+.achievement-desc { font-size: 11px; color: rgba(255,255,255,0.6); }
+.achievement-reward { font-size: 13px; color: #FFD700; }
+
+/* Achievement notification */
+.achievement-notif {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 200;
+  animation: slide-down 0.4s ease;
+}
+.notif-content {
+  background: linear-gradient(135deg, #ffd93d, #f0932b);
+  padding: 10px 20px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+}
+.notif-emoji { font-size: 20px; }
+.notif-text { font-size: 14px; font-weight: 700; color: #2d1b4e; }
+@keyframes slide-down {
+  from { transform: translateX(-50%) translateY(-40px); opacity: 0; }
+  to { transform: translateX(-50%) translateY(0); opacity: 1; }
 }
 </style>
