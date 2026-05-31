@@ -4,6 +4,7 @@ import Phaser from 'phaser'
 import { AdManager } from '../../services/AdManager'
 import { GameScene } from './scenes/GameScene'
 import { GAME_W, GAME_H } from './core'
+import SocialPanel from '@shared/vue/SocialPanel.vue'
 
 const gameContainer = ref<HTMLDivElement | null>(null)
 const adManager = AdManager.getInstance()
@@ -46,6 +47,7 @@ onUnmounted(() => {
 <template>
   <div class="game-wrapper">
     <div ref="gameContainer" id="game-container"></div>
+    <SocialPanel game-name="果冻消消" game-slug="jelly-pop" share-text="来消除果冻吧！超爽的三消游戏！" />
   </div>
 </template>
 

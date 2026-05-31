@@ -6,6 +6,7 @@ import { LevelSelectScene } from './scenes/LevelSelectScene'
 import { ShopScene } from './scenes/ShopScene'
 import { AdManager } from './services/AdManager'
 import LevelCompleteOverlay from './components/LevelCompleteOverlay.vue'
+import SocialPanel from '@shared/vue/SocialPanel.vue'
 import type { LevelConfig } from './core/GameState'
 
 const gameContainer = ref<HTMLDivElement | null>(null)
@@ -82,6 +83,7 @@ function handleLevelSelect() {
       @restart="handleRestart"
       @level-select="handleLevelSelect"
     />
+    <SocialPanel game-name="色彩混乱" game-slug="color-chaos" share-text="来挑战色彩排序吧！100关等你来！" />
   </div>
 </template>
 
