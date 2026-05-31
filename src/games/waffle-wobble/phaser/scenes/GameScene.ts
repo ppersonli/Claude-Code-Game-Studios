@@ -9,6 +9,7 @@ import {
 import { TOPPINGS, getToppingById, MAX_TOPPINGS_PER_ORDER } from '../../data/toppings'
 import { COOK_TIME, BURN_TIME, LEVEL_DURATION, GAME_W, GAME_H, SERVE_ANIM_TIME } from '../../logic/constants'
 import { saveGame, loadGame } from '../../logic/save'
+import { checkWaffleAchievements, type WaffleStats } from '../../logic/meta'
 
 const COLORS = {
   BG: 0xFFF5E6,
@@ -26,6 +27,16 @@ export class GameScene extends Phaser.Scene {
   state!: GameState
   private lastSpawnTime = 0
   private customerSlots: { x: number; y: number }[] = []
+  private META_KEY = 'waffle-wobble-meta'
+  private metaCoins = 0
+  private metaUnlockedThemes: string[] = ['classic']
+  private metaAchievements: string[] = []
+  private metaStats: WaffleStats = {
+    totalServed: 0, perfectServed: 0, totalLost: 0, highestLevel: 0,
+    bestCombo: 0, totalCoinsEarned: 0, toppingsUnlocked: 2,
+    themesUnlocked: 1, dailyCompleted: 0, gamesPlayed: 0,
+  }
+  private metaLastDaily = ''
 
   // UI refs
   private scoreText!: Phaser.GameObjects.Text
@@ -48,6 +59,8 @@ export class GameScene extends Phaser.Scene {
   create(): void {
     const saved = loadGame()
     this.state = { ...createInitialState(), ...saved, customers: [], waffle: { state: 'empty', startedAt: 0, addedToppings: [] }, gameOver: false, paused: false }
+    this.loadMeta()
+    this.metaStats.gamesPlayed++
     this.customerSlots = [
       { x: 80, y: 140 },
       { x: 240, y: 140 },
@@ -418,6 +431,7 @@ export class GameScene extends Phaser.Scene {
     // Update customer patience
     const lost = updateCustomerPatience(this.state, now)
     if (lost > 0) {
+      this.metaStats.totalLost += lost
       for (const c of this.state.customers.filter(c => c.lost)) {
         this.removeCustomerDisplay(c)
       }
@@ -444,10 +458,62 @@ export class GameScene extends Phaser.Scene {
 
     if (this.state.gameOver) {
       saveGame(this.state)
+      this.updateMetaStats()
+      this.saveMeta()
       this.cameras.main.shake(200, 0.005)
       this.time.delayedCall(1000, () => {
-        this.scene.start('ResultScene', { score: this.state.score, coins: this.state.coins, level: this.state.level, served: this.state.totalServed })
+        this.scene.start('ResultScene', {
+          score: this.state.score,
+          coins: this.state.coins,
+          level: this.state.level,
+          served: this.state.totalServed,
+          metaCoins: this.metaCoins,
+        })
       })
+    }
+  }
+
+  // ─── Meta persistence ──────────────────────────────────────────────────
+
+  private loadMeta(): void {
+    try {
+      const raw = localStorage.getItem(this.META_KEY)
+      if (raw) {
+        const data = JSON.parse(raw)
+        this.metaCoins = data.coins ?? 0
+        this.metaUnlockedThemes = Array.isArray(data.unlockedThemes) ? data.unlockedThemes : ['classic']
+        this.metaAchievements = Array.isArray(data.achievements) ? data.achievements : []
+        this.metaStats = { ...this.metaStats, ...(data.stats ?? {}) }
+        this.metaLastDaily = data.lastDailyDate ?? ''
+      }
+    } catch { /* corrupted */ }
+  }
+
+  private saveMeta(): void {
+    try {
+      localStorage.setItem(this.META_KEY, JSON.stringify({
+        coins: this.metaCoins,
+        unlockedThemes: this.metaUnlockedThemes,
+        achievements: this.metaAchievements,
+        stats: this.metaStats,
+        lastDailyDate: this.metaLastDaily,
+      }))
+    } catch { /* */ }
+  }
+
+  private updateMetaStats(): void {
+    this.metaStats.totalServed += this.state.totalServed
+    this.metaStats.perfectServed += this.state.perfectServed
+    this.metaStats.highestLevel = Math.max(this.metaStats.highestLevel, this.state.level)
+    this.metaStats.bestCombo = Math.max(this.metaStats.bestCombo, this.state.maxCombo)
+    this.metaStats.totalCoinsEarned += this.state.coins
+    this.metaStats.toppingsUnlocked = this.state.unlockedToppings.length
+    this.metaCoins += this.state.coins
+
+    const newAchievements = checkWaffleAchievements(this.metaStats, this.metaAchievements)
+    for (const a of newAchievements) {
+      this.metaAchievements.push(a.id)
+      this.metaCoins += a.reward
     }
   }
 }

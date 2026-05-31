@@ -7,11 +7,12 @@ export class ResultScene extends Phaser.Scene {
     super('ResultScene')
   }
 
-  create(data: { score?: number; coins?: number; level?: number; served?: number }): void {
+  create(data: { score?: number; coins?: number; level?: number; served?: number; metaCoins?: number }): void {
     const score = data.score ?? 0
     const coins = data.coins ?? 0
     const level = data.level ?? 1
     const served = data.served ?? 0
+    const metaCoins = data.metaCoins ?? 0
     const adManager = AdManager.getInstance()
     let rewarded = false
 
@@ -36,6 +37,12 @@ export class ResultScene extends Phaser.Scene {
     const scoreText = this.add.text(GAME_W / 2, 330, `💰 ${coins}`, {
       fontSize: '36px', fontFamily: 'Arial', color: '#FFD700', fontStyle: 'bold',
     }).setOrigin(0.5)
+
+    if (metaCoins > 0) {
+      this.add.text(GAME_W / 2, 365, `🏆 累计: 💰${metaCoins}`, {
+        fontSize: '16px', fontFamily: 'Arial', color: '#CE93D8',
+      }).setOrigin(0.5)
+    }
 
     // Rewarded ad: +30s time
     const rewardBtnGfx = this.add.graphics()
