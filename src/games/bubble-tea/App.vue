@@ -81,6 +81,7 @@ function goPlay() {
   screen.value = 'game'
   nextCustomer(state)
   adManager.gameplayStart()
+  if (state.totalDrinksServed === 0) startTutorial()
 }
 
 function goDaily() {
@@ -140,6 +141,10 @@ function handleServe() {
     const comboMult = getComboMultiplier(state.combo)
     addScorePopup(state, `+${result.points} 完美! 🔥 x${state.combo}`, '#ffd700')
     addFloatText(state, `🔥 x${state.combo} 连击!`, '#ff6b6b')
+    spawnParticles()
+    // Haptic feedback on combo milestones
+    if (state.combo >= 3 && navigator.vibrate) navigator.vibrate([30, 30, 30])
+    if (state.combo >= 5 && navigator.vibrate) navigator.vibrate([50, 30, 50])
   } else {
     audioEngine.play('fail')
     if (result.points > 0) {
@@ -180,6 +185,41 @@ function handleServe() {
 
 function handleResetCup() {
   resetCup(state)
+}
+
+// === Particles ===
+const particles = ref<{ id: number; x: number; y: number; color: string; dx: number; dy: number }[]>([])
+let particleId = 0
+function spawnParticles() {
+  const colors = ['#ffd700', '#ff6b6b', '#4CAF50', '#CE93D8', '#FF9800']
+  for (let i = 0; i < 8; i++) {
+    const id = ++particleId
+    const angle = (i / 8) * Math.PI * 2
+    const speed = 40 + Math.random() * 30
+    particles.value.push({
+      id,
+      x: window.innerWidth / 2,
+      y: window.innerHeight / 2 - 40,
+      color: colors[i % colors.length],
+      dx: Math.cos(angle) * speed,
+      dy: Math.sin(angle) * speed,
+    })
+    setTimeout(() => { particles.value = particles.value.filter(p => p.id !== id) }, 600)
+  }
+}
+
+// === Tutorial ===
+const tutorialStep = ref(0)
+const showTutorial = ref(false)
+function startTutorial() {
+  tutorialStep.value = 1
+  showTutorial.value = true
+}
+function nextTutorial() {
+  tutorialStep.value++
+  if (tutorialStep.value > 3) {
+    showTutorial.value = false
+  }
 }
 
 function handleEndGame() {
@@ -516,6 +556,33 @@ onUnmounted(() => clearTimer(state))
         <p>食材种类增加了！</p>
       </div>
     </div>
+
+    <!-- Particle effects -->
+    <div
+      v-for="p in particles"
+      :key="p.id"
+      class="particle"
+      :style="{
+        left: p.x + 'px',
+        top: p.y + 'px',
+        '--dx': p.dx + 'px',
+        '--dy': p.dy + 'px',
+        background: p.color,
+      }"
+    />
+
+    <!-- Tutorial overlay -->
+    <div v-if="showTutorial" class="tutorial-overlay" @click="nextTutorial">
+      <div v-if="tutorialStep === 1" class="tutorial-card">
+        <p>👆 <strong>點擊下方食材</strong>加入杯子</p>
+      </div>
+      <div v-else-if="tutorialStep === 2" class="tutorial-card">
+        <p>🥤 <strong>對照訂單</strong>放入正確食材</p>
+      </div>
+      <div v-else-if="tutorialStep === 3" class="tutorial-card">
+        <p>✨ <strong>點擊「出杯」</strong>送出飲品！</p>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -627,9 +694,10 @@ html, body { width: 100%; height: 100%; overflow: hidden; font-family: 'PingFang
   100% { transform: translateY(-60px); opacity: 0; }
 }
 @keyframes score-pop {
-  0% { transform: scale(0.5); opacity: 1; }
-  50% { transform: scale(1.2); }
-  100% { transform: translateY(-40px); opacity: 0; }
+  0% { transform: scale(0.3); opacity: 1; }
+  20% { transform: scale(1.5); }
+  50% { transform: scale(1); }
+  100% { transform: translateY(-60px) scale(0.8); opacity: 0; }
 }
 @keyframes shake {
   0%, 100% { transform: translateX(0); }
@@ -664,5 +732,51 @@ html, body { width: 100%; height: 100%; overflow: hidden; font-family: 'PingFang
   height: 60px; border-radius: 10px;
   display: flex; align-items: center; justify-content: center;
   margin-bottom: 6px; border: 2px solid rgba(255,255,255,0.2);
+}
+
+/* Particle effects */
+.particle {
+  position: fixed;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 150;
+  animation: particle-burst 0.6s ease-out forwards;
+}
+@keyframes particle-burst {
+  0% { transform: translate(0, 0) scale(1); opacity: 1; }
+  100% { transform: translate(var(--dx), var(--dy)) scale(0); opacity: 0; }
+}
+
+/* Tutorial overlay */
+.tutorial-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 300;
+  cursor: pointer;
+}
+.tutorial-card {
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  padding: 24px 32px;
+  border-radius: 16px;
+  color: #fff;
+  font-size: 18px;
+  text-align: center;
+  animation: pop-in 0.3s ease;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+}
+
+/* Screen transitions */
+.screen {
+  animation: screen-fade-in 0.3s ease;
+}
+@keyframes screen-fade-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 </style>

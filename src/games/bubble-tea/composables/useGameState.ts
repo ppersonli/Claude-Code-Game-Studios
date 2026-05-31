@@ -248,7 +248,7 @@ export function serveDrink(state: BubbleTeaState): ServeResult | null {
   if (state.level > prevLevel) state.levelUpLevel = state.level
 
   // Effects
-  if (result.isPerfect && state.combo >= 5) state.screenShake = true
+  if (result.isPerfect && state.combo >= 3) state.screenShake = true
 
   return result
 }
