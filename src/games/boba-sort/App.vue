@@ -1,5 +1,5 @@
 <template>
-  <div class="app" :class="currentTheme">
+  <div class="app" :class="[currentTheme, { 'game-shake': gameShake }]">
     <!-- ==================== START SCREEN ==================== -->
     <div v-if="screen === 'start'" class="screen start-screen">
       <div class="start-content">
@@ -227,6 +227,41 @@
         <span class="notif-text">{{ achievementNotif.name }} +💰{{ achievementNotif.reward }}</span>
       </div>
     </div>
+    <!-- Combo particles -->
+    <div
+      v-for="p in comboParticles"
+      :key="p.id"
+      class="combo-particle"
+      :style="{
+        left: p.x + 'px', top: p.y + 'px',
+        '--dx': p.dx + 'px', '--dy': p.dy + 'px',
+        background: p.color,
+      }"
+    />
+
+    <!-- Score popups -->
+    <div
+      v-for="sp in scorePopups"
+      :key="sp.id"
+      class="score-popup-float"
+      :style="{ left: sp.x + 'px', top: sp.y + 'px', color: sp.color }"
+    >
+      {{ sp.text }}
+    </div>
+
+    <!-- Tutorial overlay -->
+    <div v-if="showTutorial" class="tutorial-overlay" @click="nextTutorial">
+      <div v-if="tutorialStep === 1" class="tutorial-card">
+        <p>👆 <strong>點擊試管</strong>選擇要倒出的試管</p>
+      </div>
+      <div v-else-if="tutorialStep === 2" class="tutorial-card">
+        <p>👉 <strong>再點另一個試管</strong>倒入相同顏色</p>
+      </div>
+      <div v-else-if="tutorialStep === 3" class="tutorial-card">
+        <p>🎯 <strong>將所有顏色分類</strong>即可過關！</p>
+      </div>
+    </div>
+
     <SocialPanel game-name="珍珠奶茶排序" game-slug="boba-sort" share-text="来挑战珍珠奶茶排序吧！颜色分类烧脑又好玩！" />
     <LeaderboardPanel game-slug="boba-sort" game-name="珍珠奶茶排序" />
   </div>
@@ -273,6 +308,49 @@ let pourTimeout: ReturnType<typeof setTimeout> | null = null
 
 const achievementNotif = ref<{ name: string; emoji: string; reward: number } | null>(null)
 const resultCoins = ref({ level: 0, daily: 0 })
+
+// Polish: shake, particles, tutorial, score popup
+const gameShake = ref(false)
+const comboParticles = ref<{ id: number; x: number; y: number; dx: number; dy: number; color: string }[]>([])
+const scorePopups = ref<{ id: number; text: string; x: number; y: number; color: string }[]>([])
+const tutorialStep = ref(0)
+const showTutorial = ref(false)
+let polishId = 0
+
+function spawnComboParticles() {
+  const colors = ['#ff6b9d', '#c44dff', '#ffd93d', '#6bcb77', '#4d96ff']
+  for (let i = 0; i < 10; i++) {
+    const id = ++polishId
+    const angle = (i / 10) * Math.PI * 2
+    const speed = 50 + Math.random() * 40
+    comboParticles.value.push({
+      id,
+      x: window.innerWidth / 2,
+      y: window.innerHeight / 2 - 60,
+      dx: Math.cos(angle) * speed,
+      dy: Math.sin(angle) * speed,
+      color: colors[i % colors.length],
+    })
+    setTimeout(() => { comboParticles.value = comboParticles.value.filter(p => p.id !== id) }, 700)
+  }
+}
+
+function spawnScorePopup(text: string, color: string) {
+  const id = ++polishId
+  const x = window.innerWidth / 2 + (Math.random() - 0.5) * 80
+  const y = window.innerHeight / 2 - 100
+  scorePopups.value.push({ id, text, x, y, color })
+  setTimeout(() => { scorePopups.value = scorePopups.value.filter(p => p.id !== id) }, 1200)
+}
+
+function startTutorial() {
+  tutorialStep.value = 1
+  showTutorial.value = true
+}
+function nextTutorial() {
+  tutorialStep.value++
+  if (tutorialStep.value > 3) showTutorial.value = false
+}
 
 // Persistence
 const STORAGE_KEY = 'boba_sort_progress'
@@ -356,6 +434,9 @@ function startGame(levelIndex: number): void {
   screen.value = 'game'
   adManager.gameplayStart()
   startTimer()
+
+  // Tutorial on first play
+  if (progress.totalStars === 0 && levelIndex === 0) startTutorial()
 
   // Midgame ad every 5 levels
   if (levelIndex > 0 && levelIndex % 5 === 0) {
@@ -450,8 +531,18 @@ function handleTubeSelect(tubeId: number): void {
 
       if (success) {
         audioEngine.play('add')
+        // Score popup
+        if (state.combo > 1) {
+          spawnScorePopup(`×${getComboMultiplier(state.combo)}`, '#ffd93d')
+          spawnComboParticles()
+          gameShake.value = true
+          setTimeout(() => { gameShake.value = false }, 300)
+          if (navigator.vibrate) navigator.vibrate(30)
+        }
         if (state.won) {
           audioEngine.play('levelup')
+          spawnComboParticles()
+          spawnComboParticles()
           setTimeout(() => endGame(), 800)
         }
       } else {
@@ -1108,5 +1199,70 @@ html, body, #app {
 @keyframes slide-down {
   from { transform: translateX(-50%) translateY(-40px); opacity: 0; }
   to { transform: translateX(-50%) translateY(0); opacity: 1; }
+}
+
+/* Game shake */
+.game-shake {
+  animation: game-shake 0.3s ease !important;
+}
+@keyframes game-shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-5px); }
+  40% { transform: translateX(5px); }
+  60% { transform: translateX(-3px); }
+  80% { transform: translateX(3px); }
+}
+
+/* Combo particles */
+.combo-particle {
+  position: fixed;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 150;
+  animation: particle-burst 0.7s ease-out forwards;
+}
+@keyframes particle-burst {
+  0% { transform: translate(0, 0) scale(1); opacity: 1; }
+  100% { transform: translate(var(--dx), var(--dy)) scale(0); opacity: 0; }
+}
+
+/* Score popup */
+.score-popup-float {
+  position: fixed;
+  pointer-events: none;
+  z-index: 160;
+  font-size: 24px;
+  font-weight: 800;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+  animation: score-float 1.2s ease-out forwards;
+}
+@keyframes score-float {
+  0% { transform: scale(0.5) translateY(0); opacity: 1; }
+  20% { transform: scale(1.4) translateY(-10px); }
+  100% { transform: scale(0.8) translateY(-70px); opacity: 0; }
+}
+
+/* Tutorial */
+.tutorial-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 300;
+  cursor: pointer;
+}
+.tutorial-card {
+  background: linear-gradient(135deg, #ff6b9d, #c44dff);
+  padding: 24px 32px;
+  border-radius: 16px;
+  color: #fff;
+  font-size: 18px;
+  text-align: center;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  animation: pop-in 0.3s ease;
 }
 </style>
