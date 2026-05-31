@@ -1,6 +1,56 @@
 import Phaser from 'phaser'
 import { LevelManager, type LevelProgress } from '../services/LevelManager'
 import { SkinManager } from '../services/SkinManager'
+import { isDailyRewardAvailable, claimDailyReward, DAILY_REWARD_TICKETS, checkChaosAchievements, type ChaosStats } from '../logic/meta'
+import { CHAOS_ACHIEVEMENTS } from '../data/achievements'
+
+const META_STORAGE_KEY = 'color-chaos-meta'
+const PALETTES_STORAGE_KEY = 'color-chaos-palettes'
+const ACHIEVEMENTS_STORAGE_KEY = 'color-chaos-achievements'
+
+interface MetaData {
+  lastDailyDate: string
+  dailyCount: number
+  totalMoves: number
+  threeStarLevels: number
+  levelsCompleted: number
+}
+
+function loadMeta(): MetaData {
+  try {
+    const raw = localStorage.getItem(META_STORAGE_KEY)
+    if (raw) return JSON.parse(raw)
+  } catch { /* */ }
+  return { lastDailyDate: '', dailyCount: 0, totalMoves: 0, threeStarLevels: 0, levelsCompleted: 0 }
+}
+
+function saveMeta(meta: MetaData): void {
+  try { localStorage.setItem(META_STORAGE_KEY, JSON.stringify(meta)) } catch { /* */ }
+}
+
+function loadAchievements(): string[] {
+  try {
+    const raw = localStorage.getItem(ACHIEVEMENTS_STORAGE_KEY)
+    if (raw) return JSON.parse(raw)
+  } catch { /* */ }
+  return []
+}
+
+function saveAchievements(achievements: string[]): void {
+  try { localStorage.setItem(ACHIEVEMENTS_STORAGE_KEY, JSON.stringify(achievements)) } catch { /* */ }
+}
+
+function loadPalettes(): string[] {
+  try {
+    const raw = localStorage.getItem(PALETTES_STORAGE_KEY)
+    if (raw) return JSON.parse(raw)
+  } catch { /* */ }
+  return ['classic']
+}
+
+function savePalettes(palettes: string[]): void {
+  try { localStorage.setItem(PALETTES_STORAGE_KEY, JSON.stringify(palettes)) } catch { /* */ }
+}
 
 /**
  * LevelSelectScene - grid-based level selection screen.
@@ -12,6 +62,7 @@ export class LevelSelectScene extends Phaser.Scene {
   private scrollY: number = 0
   private gridContainer!: Phaser.GameObjects.Container
   private maxScroll: number = 0
+  private achievementNotif: Phaser.GameObjects.Container | null = null
 
   constructor() {
     super({ key: 'LevelSelectScene' })
@@ -62,6 +113,35 @@ export class LevelSelectScene extends Phaser.Scene {
       fontFamily: 'Arial, sans-serif',
       color: '#FFD700',
     }).setOrigin(1, 0.5)
+
+    // Daily reward button
+    const meta = loadMeta()
+    if (isDailyRewardAvailable(meta.lastDailyDate)) {
+      const dailyBtn = this.add.text(width / 2, 62, `🎁 Daily +${DAILY_REWARD_TICKETS}🎫`, {
+        fontSize: '13px', fontFamily: 'Arial, sans-serif', color: '#00b894', fontStyle: 'bold',
+        backgroundColor: '#1a3a2a', padding: { x: 10, y: 4 },
+      }).setOrigin(0.5).setInteractive()
+      dailyBtn.on('pointerdown', () => {
+        const result = claimDailyReward(meta.lastDailyDate)
+        if (result.claimed) {
+          meta.lastDailyDate = result.today
+          meta.dailyCount++
+          saveMeta(meta)
+          SkinManager.addTickets(DAILY_REWARD_TICKETS)
+          dailyBtn.setText('✅ Claimed').setColor('#666').disableInteractive()
+          this.checkAndShowAchievements()
+        }
+      })
+    }
+
+    // Achievement counter
+    const achievements = loadAchievements()
+    this.add.text(30, 62, `🏆 ${achievements.length}/${CHAOS_ACHIEVEMENTS.length}`, {
+      fontSize: '11px', fontFamily: 'Arial, sans-serif', color: '#CE93D8',
+    }).setOrigin(0, 0.5)
+
+    // Check achievements on load
+    this.checkAndShowAchievements()
 
     this.gridContainer = this.add.container(0, 0)
 
@@ -198,5 +278,82 @@ export class LevelSelectScene extends Phaser.Scene {
       case 1: return '⭐'
       default: return ''
     }
+  }
+
+  private checkAndShowAchievements(): void {
+    const meta = loadMeta()
+    const existing = loadAchievements()
+    const progress = LevelManager.loadProgress()
+
+    let totalStars = 0
+    let threeStarLevels = 0
+    let levelsCompleted = 0
+    progress.forEach((p) => {
+      if (p.completed) levelsCompleted++
+      totalStars += p.stars
+      if (p.stars === 3) threeStarLevels++
+    })
+
+    const stats: ChaosStats = {
+      levelsCompleted,
+      totalStars,
+      threeStarLevels,
+      totalMoves: meta.totalMoves,
+      highestLevel: LevelManager.getHighestUnlockedLevel(progress),
+      skinsUnlocked: SkinManager.getUnlockedSkins().length,
+      palettesUnlocked: loadPalettes().length,
+      dailyCompleted: meta.dailyCount,
+    }
+
+    const newAchievements = checkChaosAchievements(stats, existing)
+    if (newAchievements.length > 0) {
+      for (const a of newAchievements) {
+        existing.push(a.id)
+        SkinManager.addTickets(a.reward)
+      }
+      saveAchievements(existing)
+
+      // Show notification
+      const a = newAchievements[0]
+      this.showAchievementNotif(`${a.emoji} ${a.name}! +${a.reward}🎫`)
+    }
+  }
+
+  private showAchievementNotif(text: string): void {
+    if (this.achievementNotif) this.achievementNotif.destroy()
+    const { width } = this.scale
+    this.achievementNotif = this.add.container(width / 2, 100)
+
+    const bg = this.add.graphics()
+    bg.fillStyle(0x2a5a2a, 0.95)
+    bg.fillRoundedRect(-120, -18, 240, 36, 10)
+    this.achievementNotif.add(bg)
+
+    const txt = this.add.text(0, 0, text, {
+      fontSize: '14px', fontFamily: 'Arial, sans-serif', color: '#FFD700', fontStyle: 'bold',
+    }).setOrigin(0.5)
+    this.achievementNotif.add(txt)
+
+    this.achievementNotif.setAlpha(0)
+    this.tweens.add({
+      targets: this.achievementNotif,
+      alpha: 1,
+      y: 90,
+      duration: 400,
+      ease: 'Back.easeOut',
+      onComplete: () => {
+        this.time.delayedCall(2500, () => {
+          if (this.achievementNotif) {
+            this.tweens.add({
+              targets: this.achievementNotif,
+              alpha: 0,
+              y: 70,
+              duration: 300,
+              onComplete: () => { this.achievementNotif?.destroy(); this.achievementNotif = null },
+            })
+          }
+        })
+      },
+    })
   }
 }
