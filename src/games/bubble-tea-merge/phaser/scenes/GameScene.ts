@@ -11,7 +11,8 @@ import {
 import { INGREDIENTS, MAX_INGREDIENT_LEVEL, getIngredientByLevel } from '../../data/ingredients'
 import { canMerge, processMerge, checkGameOver, clampDropX, getRandomLevel, type IngredientBody } from '../../logic/game-state'
 import { calculateMergeScore } from '../../logic/scoring'
-import { updateHighScore } from '../../logic/save'
+import { loadSave, saveData } from '../../logic/save'
+import { onMerge, onGameEnd, type MergeSaveData } from '../../logic/meta'
 import { drawIngredient, drawSparkles } from '../helpers'
 
 interface IngredientGfxData {
@@ -29,6 +30,10 @@ export class GameScene extends Phaser.Scene {
   private gameOver = false
   private nextLevel = 0
   private merging = new Set<Phaser.GameObjects.Graphics>()
+  private combo = 0
+  private maxCombo = 0
+  private mergeSave!: MergeSaveData
+  private isDaily = false
 
   private cupGfx!: Phaser.GameObjects.Graphics
   private scoreText!: Phaser.GameObjects.Text
@@ -39,7 +44,7 @@ export class GameScene extends Phaser.Scene {
     super('GameScene')
   }
 
-  create(): void {
+  create(data?: { isDaily?: boolean }): void {
     this.score = 0
     this.ingredients = []
     this.ingredientMap = new Map()
@@ -47,6 +52,10 @@ export class GameScene extends Phaser.Scene {
     this.gameOver = false
     this.nextLevel = getRandomLevel()
     this.merging = new Set()
+    this.combo = 0
+    this.maxCombo = 0
+    this.mergeSave = loadSave()
+    this.isDaily = data?.isDaily ?? false
 
     this.cameras.main.setBackgroundColor(BG_COLOR)
 
@@ -299,14 +308,18 @@ export class GameScene extends Phaser.Scene {
       droppedAt: Date.now(),
     })
 
-    // Score
+    // Score + coins
     const points = calculateMergeScore(dataA.level)
     this.score += points
-    this.scoreText.setText(`Score: ${this.score}`)
+    this.combo++
+    if (this.combo > this.maxCombo) this.maxCombo = this.combo
+    const earnedCoins = onMerge(this.mergeSave, mergeResult.newLevel, this.combo)
+    saveData(this.mergeSave)
+    this.scoreText.setText(`Score: ${this.score} 💰${this.mergeSave.coins}`)
 
     // Effects
     this.mergeParticles(mx, my, newInfo.color)
-    this.mergeScorePopup(mx, my - newInfo.radius - 10, `+${points}`)
+    this.mergeScorePopup(mx, my - newInfo.radius - 10, `+${points} 💰+${earnedCoins}`)
 
     // Spring tween
     newGfx.setScale(1.5)
@@ -392,7 +405,8 @@ export class GameScene extends Phaser.Scene {
   private triggerGameOver(): void {
     this.gameOver = true
     this.canDrop = false
-    const save = updateHighScore(this.score)
+    const gameResult = onGameEnd(this.mergeSave, this.score, this.isDaily)
+    saveData(this.mergeSave)
 
     this.cameras.main.shake(300, 0.01)
 
@@ -408,7 +422,13 @@ export class GameScene extends Phaser.Scene {
     }
 
     this.time.delayedCall(1500, () => {
-      this.scene.start('ResultScene', { score: this.score, highScore: save.highScore })
+      this.scene.start('ResultScene', {
+        score: this.score,
+        highScore: this.mergeSave.highScore,
+        scoreCoins: gameResult.scoreCoins,
+        dailyCoins: gameResult.dailyCoins,
+        newAchievements: gameResult.newAchievements.map(a => ({ name: a.name, emoji: a.emoji, reward: a.reward })),
+      })
     })
   }
 
