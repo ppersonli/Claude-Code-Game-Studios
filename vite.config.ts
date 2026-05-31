@@ -36,6 +36,7 @@ export default defineConfig({
   build: {
     rollupOptions: {
       input: {
+        'home': resolve(__dirname, 'src/games/index.html'),
         'bubble-tea': resolve(__dirname, 'src/games/bubble-tea/index.html'),
         'meme-match': resolve(__dirname, 'src/games/meme-match/index.html'),
         'boba-drop': resolve(__dirname, 'src/games/boba-drop/index.html'),
