@@ -23,6 +23,7 @@ import {
   saveGameState,
 } from '../composables/useGameLogic'
 import { AdManager } from '../../../services/AdManager'
+import { checkCafeAchievements, type CafeStats } from '../composables/useMeta'
 
 const GAME_W = 480
 const GAME_H = 854
@@ -70,6 +71,18 @@ export class GameScene extends Phaser.Scene {
   tabButtons: { name: string; btn: Phaser.GameObjects.Text }[] = []
   tabContentGroup: Phaser.GameObjects.GameObject[] = []
 
+  // Meta state
+  private META_KEY = 'idle-coffee-shop-meta'
+  private metaCoins = 0
+  private metaUnlockedThemes: string[] = ['classic']
+  private metaAchievements: string[] = []
+  private metaStats: CafeStats = {
+    totalCups: 0, totalClicks: 0, totalEarned: 0, highestLevel: 0,
+    prestigeCount: 0, employeesHired: 0, recipesUnlocked: 0,
+    themesUnlocked: 1, dailyCompleted: 0, gamesPlayed: 0,
+  }
+  private metaLastDaily = ''
+
   constructor() {
     super({ key: 'GameScene' })
   }
@@ -77,12 +90,14 @@ export class GameScene extends Phaser.Scene {
   create() {
     this.state = loadGameState()
     calculateOfflineEarnings(this.state)
+    this.loadMeta()
+    this.metaStats.gamesPlayed++
     this.drawBackground()
     this.createMainUI()
     this.createCoffeeCup()
     this.createTabSystem()
 
-    this.time.addEvent({ delay: 1000, callback: () => { autoBrew(this.state); this.updateUI(); this.switchTab(this.currentTab) }, callbackScope: this, loop: true })
+    this.time.addEvent({ delay: 1000, callback: () => { autoBrew(this.state); this.metaStats.totalCups += Math.max(1, Math.floor(this.state.totalCups / 100)); this.checkAchievements(); this.updateUI(); this.switchTab(this.currentTab) }, callbackScope: this, loop: true })
     this.time.addEvent({ delay: 10000, callback: () => saveGameState(this.state), callbackScope: this, loop: true })
     this.events.on('shutdown', () => saveGameState(this.state))
 
@@ -449,7 +464,7 @@ export class GameScene extends Phaser.Scene {
     btnGfx.fillRoundedRect(GAME_W / 2 - 90, y, 180, 40, 12)
     this.addToTab(btnGfx)
     const btnText = this.add.text(GAME_W / 2, y + 20, canPrestige ? '⭐ PRESTIGE NOW!' : 'Need $1M to Prestige', { fontSize: '14px', fontFamily: 'Arial', fontStyle: 'bold', color: canPrestige ? COLORS.TEXT_DARK : '#999999' }).setOrigin(0.5)
-    if (canPrestige) { btnText.setInteractive(); btnText.on('pointerdown', () => { doPrestige(this.state); saveGameState(this.state); this.updateUI(); this.switchTab('brew') }) }
+    if (canPrestige) { btnText.setInteractive(); btnText.on('pointerdown', () => { doPrestige(this.state); this.metaStats.prestigeCount = this.state.prestigeCount; this.checkAchievements(); saveGameState(this.state); this.updateUI(); this.switchTab('brew') }) }
     this.addToTab(btnText); y += 60
 
     const resetGfx = this.add.graphics()
@@ -468,6 +483,11 @@ export class GameScene extends Phaser.Scene {
 
   handleMakeCoffee() {
     const earnings = makeCoffee(this.state)
+    this.metaStats.totalClicks++
+    this.metaStats.totalCups++
+    this.metaStats.totalEarned = Math.max(this.metaStats.totalEarned, this.state.totalEarned)
+    this.metaStats.highestLevel = Math.max(this.metaStats.highestLevel, this.state.level)
+    this.checkAchievements()
     this.isBrewing = true
     this.tweens.add({ targets: this.cupContainer, scaleX: 1.15, scaleY: 0.9, duration: 100, yoyo: true, ease: 'Bounce.easeOut', onComplete: () => { this.isBrewing = false } })
     this.spawnCoinParticles(GAME_W / 2, 280, earnings)
@@ -521,5 +541,42 @@ export class GameScene extends Phaser.Scene {
 
   updateTabContent() {
     this.switchTab(this.currentTab)
+  }
+
+  // ─── Meta persistence ──────────────────────────────────────────────────
+
+  private loadMeta(): void {
+    try {
+      const raw = localStorage.getItem(this.META_KEY)
+      if (raw) {
+        const data = JSON.parse(raw)
+        this.metaCoins = data.coins ?? 0
+        this.metaUnlockedThemes = Array.isArray(data.unlockedThemes) ? data.unlockedThemes : ['classic']
+        this.metaAchievements = Array.isArray(data.achievements) ? data.achievements : []
+        this.metaStats = { ...this.metaStats, ...(data.stats ?? {}) }
+        this.metaLastDaily = data.lastDailyDate ?? ''
+      }
+    } catch { /* corrupted */ }
+  }
+
+  private saveMeta(): void {
+    try {
+      localStorage.setItem(this.META_KEY, JSON.stringify({
+        coins: this.metaCoins,
+        unlockedThemes: this.metaUnlockedThemes,
+        achievements: this.metaAchievements,
+        stats: this.metaStats,
+        lastDailyDate: this.metaLastDaily,
+      }))
+    } catch { /* */ }
+  }
+
+  private checkAchievements(): void {
+    const newAchievements = checkCafeAchievements(this.metaStats, this.metaAchievements)
+    for (const a of newAchievements) {
+      this.metaAchievements.push(a.id)
+      this.metaCoins += a.reward
+    }
+    if (newAchievements.length > 0) this.saveMeta()
   }
 }
