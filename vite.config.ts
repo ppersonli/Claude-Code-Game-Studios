@@ -48,6 +48,8 @@ export default defineConfig({
         'sweet-sort': resolve(__dirname, 'src/games/sweet-sort/index.html'),
         'bubble-tea-merge': resolve(__dirname, 'src/games/bubble-tea-merge/index.html'),
         'bubble-tea-idle': resolve(__dirname, 'src/games/bubble-tea-idle/index.html'),
+        'waffle-wobble': resolve(__dirname, 'src/games/waffle-wobble/index.html'),
+        'bubble-shooter': resolve(__dirname, 'src/games/bubble-shooter/index.html'),
       },
     },
   },
