@@ -47,6 +47,7 @@ export default defineConfig({
         'jelly-pop': resolve(__dirname, 'src/games/jelly-pop/index.html'),
         'sweet-sort': resolve(__dirname, 'src/games/sweet-sort/index.html'),
         'bubble-tea-merge': resolve(__dirname, 'src/games/bubble-tea-merge/index.html'),
+        'bubble-tea-idle': resolve(__dirname, 'src/games/bubble-tea-idle/index.html'),
       },
     },
   },
