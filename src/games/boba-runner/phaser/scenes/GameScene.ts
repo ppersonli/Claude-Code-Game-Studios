@@ -6,6 +6,7 @@ import {
   updatePowerUps, handleHit, getSpeedPercent, getPlayerHeight,
 } from '../../logic/game-state'
 import { saveProgress, loadSave } from '../../logic/save'
+import { gameCoins, checkRunnerAchievements, type RunnerStats } from '../../logic/meta'
 import {
   GAME_W, GAME_H, GROUND_Y, PLAYER_X, PLAYER_WIDTH,
   PLAYER_HEIGHT, PEARL_RADIUS, SLIDE_DURATION,
@@ -31,6 +32,18 @@ export class GameScene extends Phaser.Scene {
   private hudPower!: Phaser.GameObjects.Text
   private bgTiles: { x: number }[] = []
   private groundOffset = 0
+  private META_KEY = 'boba-runner-meta'
+  private metaCoins = 0
+  private metaUnlockedThemes: string[] = ['classic']
+  private metaAchievements: string[] = []
+  private metaStats: RunnerStats = {
+    totalScore: 0, highScore: 0, totalPearls: 0, totalDistance: 0,
+    totalJumps: 0, totalSlides: 0, shieldsUsed: 0,
+    themesUnlocked: 1, dailyCompleted: 0, gamesPlayed: 0,
+  }
+  private metaLastDaily = ''
+  private sessionJumps = 0
+  private sessionSlides = 0
 
   constructor() { super({ key: 'GameScene' }) }
 
@@ -39,6 +52,10 @@ export class GameScene extends Phaser.Scene {
     this.state = createInitialState(save.highScore)
     this.bgTiles = []
     for (let x = 0; x < GAME_W + 100; x += 80) this.bgTiles.push({ x })
+    this.loadMeta()
+    this.metaStats.gamesPlayed++
+    this.sessionJumps = 0
+    this.sessionSlides = 0
 
     this.drawStaticBg()
     this.worldGfx = this.add.graphics()
@@ -69,11 +86,11 @@ export class GameScene extends Phaser.Scene {
   private setupInput(): void {
     this.input.on('pointerdown', (ptr: Phaser.Input.Pointer) => {
       if (this.state.gameOver) return
-      if (ptr.y > GAME_H / 2) slide(this.state, this.time.now)
-      else jump(this.state)
+      if (ptr.y > GAME_H / 2) { slide(this.state, this.time.now); this.sessionSlides++ }
+      else { jump(this.state); this.sessionJumps++ }
     })
-    this.input.keyboard?.on('keydown-SPACE', () => { if (!this.state.gameOver) jump(this.state) })
-    this.input.keyboard?.on('keydown-DOWN', () => { if (!this.state.gameOver) slide(this.state, this.time.now) })
+    this.input.keyboard?.on('keydown-SPACE', () => { if (!this.state.gameOver) { jump(this.state); this.sessionJumps++ } })
+    this.input.keyboard?.on('keydown-DOWN', () => { if (!this.state.gameOver) { slide(this.state, this.time.now); this.sessionSlides++ } })
   }
 
   update(_time: number, _delta: number): void {
@@ -92,6 +109,7 @@ export class GameScene extends Phaser.Scene {
       const died = handleHit(this.state)
       if (died) {
         saveProgress(this.state.score, this.state.pearls)
+        this.updateMetaOnGameOver()
         this.cameras.main.shake(200, 0.01)
         this.time.delayedCall(800, () => {
           this.scene.start('ResultScene', {
@@ -99,6 +117,7 @@ export class GameScene extends Phaser.Scene {
             pearls: this.state.pearls,
             highScore: this.state.highScore,
             distance: Math.floor(this.state.distance),
+            metaCoins: this.metaCoins,
           })
         })
       }
@@ -198,5 +217,50 @@ export class GameScene extends Phaser.Scene {
     })
     const shield = this.state.shieldActive ? '🛡️ ' : ''
     this.hudPower.setText(shield + powers.join(' '))
+  }
+
+  // ─── Meta persistence ──────────────────────────────────────────────────
+
+  private loadMeta(): void {
+    try {
+      const raw = localStorage.getItem(this.META_KEY)
+      if (raw) {
+        const data = JSON.parse(raw)
+        this.metaCoins = data.coins ?? 0
+        this.metaUnlockedThemes = Array.isArray(data.unlockedThemes) ? data.unlockedThemes : ['classic']
+        this.metaAchievements = Array.isArray(data.achievements) ? data.achievements : []
+        this.metaStats = { ...this.metaStats, ...(data.stats ?? {}) }
+        this.metaLastDaily = data.lastDailyDate ?? ''
+      }
+    } catch { /* corrupted */ }
+  }
+
+  private saveMeta(): void {
+    try {
+      localStorage.setItem(this.META_KEY, JSON.stringify({
+        coins: this.metaCoins,
+        unlockedThemes: this.metaUnlockedThemes,
+        achievements: this.metaAchievements,
+        stats: this.metaStats,
+        lastDailyDate: this.metaLastDaily,
+      }))
+    } catch { /* */ }
+  }
+
+  private updateMetaOnGameOver(): void {
+    this.metaStats.totalScore += this.state.score
+    this.metaStats.highScore = Math.max(this.metaStats.highScore, this.state.score)
+    this.metaStats.totalPearls += this.state.pearls
+    this.metaStats.totalDistance += Math.floor(this.state.distance)
+    this.metaStats.totalJumps += this.sessionJumps
+    this.metaStats.totalSlides += this.sessionSlides
+    const earnedCoins = gameCoins(this.state.score, this.state.pearls)
+    this.metaCoins += earnedCoins
+    const newAchievements = checkRunnerAchievements(this.metaStats, this.metaAchievements)
+    for (const a of newAchievements) {
+      this.metaAchievements.push(a.id)
+      this.metaCoins += a.reward
+    }
+    this.saveMeta()
   }
 }

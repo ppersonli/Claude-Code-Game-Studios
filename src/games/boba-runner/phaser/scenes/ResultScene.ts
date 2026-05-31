@@ -5,11 +5,12 @@ import { AdManager } from '../../../../services/AdManager'
 export class ResultScene extends Phaser.Scene {
   constructor() { super({ key: 'ResultScene' }) }
 
-  create(data: { score?: number; pearls?: number; highScore?: number; distance?: number }): void {
+  create(data: { score?: number; pearls?: number; highScore?: number; distance?: number; metaCoins?: number }): void {
     const score = data.score ?? 0
     const pearls = data.pearls ?? 0
     const highScore = data.highScore ?? 0
     const distance = data.distance ?? 0
+    const metaCoins = data.metaCoins ?? 0
     const adManager = AdManager.getInstance()
     let rewarded = false
 
@@ -31,6 +32,12 @@ export class ResultScene extends Phaser.Scene {
     this.add.text(GAME_W / 2, 310, `最高分: ${highScore}`, {
       fontSize: '14px', fontFamily: 'Arial', color: '#CE93D8',
     }).setOrigin(0.5)
+
+    if (metaCoins > 0) {
+      this.add.text(GAME_W / 2, 335, `💰 累计: ${metaCoins}`, {
+        fontSize: '14px', fontFamily: 'Arial', color: '#FFD700',
+      }).setOrigin(0.5)
+    }
 
     // Rewarded ad: continue
     const rBg = this.add.graphics().fillStyle(0xe056fd, 1).fillRoundedRect(GAME_W / 2 - 90, 350, 180, 45, 12)
