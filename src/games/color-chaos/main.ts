@@ -1,7 +1,10 @@
 import { createApp } from 'vue'
-import { AdManager } from './services/AdManager'
+import { AdManager } from '../../services/AdManager'
 import App from './App.vue'
 
-AdManager.getInstance().init()
+const adManager = AdManager.getInstance()
+adManager.init()
+// Async platform detection (Poki/CrazyGames) — non-blocking
+adManager.initAsync()
 
 createApp(App).mount('#app')

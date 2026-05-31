@@ -2,7 +2,9 @@ import { createApp } from 'vue'
 import { AdManager } from '../../services/AdManager'
 import App from './App.vue'
 
-// Initialise the CrazyGames SDK wrapper before the Vue app mounts
-AdManager.getInstance().init()
+const adManager = AdManager.getInstance()
+adManager.init()
+// Async platform detection (Poki/CrazyGames) — non-blocking
+adManager.initAsync()
 
 createApp(App).mount('#app')

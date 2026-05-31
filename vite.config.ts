@@ -16,9 +16,12 @@ function cgSdkOrderPlugin(): Plugin {
     name: 'cg-sdk-order',
     enforce: 'post',
     transformIndexHtml(html) {
-      const sdkScript = '<script src="https://sdk.crazygames.com/crazygames-sdk-v3.js"></script>'
-      html = html.replace(sdkScript, '')
-      html = html.replace('<head>', `<head>\n  ${sdkScript}`)
+      // Move both SDK scripts to the head, Poki before CrazyGames
+      const pokiScript = '<script src="https://game-cdn.poki.com/scripts/v2/poki-sdk.js"></script>'
+      const cgScript = '<script src="https://sdk.crazygames.com/crazygames-sdk-v3.js"></script>'
+      html = html.replace(pokiScript, '')
+      html = html.replace(cgScript, '')
+      html = html.replace('<head>', `<head>\n  ${pokiScript}\n  ${cgScript}`)
       return html
     },
   }

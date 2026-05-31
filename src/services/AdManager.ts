@@ -1,40 +1,21 @@
 /**
- * AdManager — CrazyGames SDK v3 integration singleton.
+ * AdManager — Multi-platform SDK integration singleton.
+ *
+ * Delegates to PlatformManager which auto-detects Poki, CrazyGames,
+ * or falls back to local dev (no-op).
  *
  * Provides midgame + rewarded ads with graceful degradation.
- * If the SDK is unavailable, every call becomes a safe no-op so the game
+ * If no SDK is available, every call becomes a safe no-op so the game
  * continues running without interruption.
  */
 
+import { PlatformManager } from './PlatformManager'
+
 type AdCallback = () => void
-
-interface CrazyGamesSDK {
-  game: {
-    gameplayStart(): void
-    gameplayStop(): void
-  }
-  ad: {
-    requestAd(type: 'midgame' | 'rewarded', callbacks: {
-      adStarted?: () => void
-      adFinished?: () => void
-      adError?: (error: unknown) => void
-    }): void
-  }
-}
-
-declare global {
-  interface Window {
-    CrazyGames?: {
-      SDK?: CrazyGamesSDK
-    }
-  }
-}
 
 export class AdManager {
   private static instance: AdManager | null = null
 
-  private _sdkAvailable = false
-  private _adblockDetected = false
   private _onAdStart: AdCallback | null = null
   private _onAdEnd: AdCallback | null = null
 
@@ -54,6 +35,7 @@ export class AdManager {
   /** Reset the singleton (useful in tests). */
   static resetInstance(): void {
     AdManager.instance = null
+    PlatformManager.resetInstance()
   }
 
   /* ------------------------------------------------------------------ */
@@ -61,36 +43,26 @@ export class AdManager {
   /* ------------------------------------------------------------------ */
 
   /**
-   * Detect whether the CrazyGames SDK is available.
-   * Must be called once after the SDK script has loaded.
+   * Detect available platform SDK and initialize.
+   * Delegates to PlatformManager for dual-platform support.
+   * Must be called once after SDK scripts have loaded.
    */
   init(): void {
-    try {
-      if (
-        typeof window !== 'undefined' &&
-        window.CrazyGames?.SDK?.game &&
-        window.CrazyGames.SDK.ad
-      ) {
-        this._sdkAvailable = true
-        this._detectAdblock()
-      } else {
-        this._sdkAvailable = false
-      }
-    } catch {
-      this._sdkAvailable = false
-    }
+    // Sync init — PlatformManager handles async init separately
+    // via initAsync() called in main.ts
+    PlatformManager.getInstance()
   }
 
-  private _detectAdblock(): void {
-    try {
-      // CrazyGames SDK exposes an adblock flag after initialisation.
-      // If unavailable we default to "no adblock detected".
-      const sdk = window.CrazyGames?.SDK as unknown as Record<string, unknown>
-      if (sdk && typeof sdk === 'object' && 'hasAdblock' in sdk) {
-        this._adblockDetected = Boolean((sdk as { hasAdblock?: boolean }).hasAdblock)
-      }
-    } catch {
-      this._adblockDetected = false
+  /**
+   * Async initialization — detects Poki/CrazyGames SDK.
+   * Call this in main.ts before mounting the Vue app.
+   */
+  async initAsync(): Promise<void> {
+    const pm = PlatformManager.getInstance()
+    await pm.init()
+    // Wire callbacks if already set
+    if (this._onAdStart && this._onAdEnd) {
+      pm.setAdCallbacks(this._onAdStart, this._onAdEnd)
     }
   }
 
@@ -98,14 +70,15 @@ export class AdManager {
   /*  Public getters                                                     */
   /* ------------------------------------------------------------------ */
 
-  /** Whether the SDK is available. `false` → graceful no-op mode. */
+  /** Whether any SDK is available. `false` → graceful no-op mode. */
   get isEnabled(): boolean {
-    return this._sdkAvailable && !this._adblockDetected
+    const pm = PlatformManager.getInstance()
+    return pm.platform !== 'local'
   }
 
-  /** Whether an ad-blocker was detected. */
-  get adblockDetected(): boolean {
-    return this._adblockDetected
+  /** Which platform is active. */
+  get platform() {
+    return PlatformManager.getInstance().platform
   }
 
   /* ------------------------------------------------------------------ */
@@ -113,19 +86,11 @@ export class AdManager {
   /* ------------------------------------------------------------------ */
 
   gameplayStart(): void {
-    try {
-      if (this._sdkAvailable) {
-        window.CrazyGames!.SDK!.game.gameplayStart()
-      }
-    } catch { /* swallow */ }
+    PlatformManager.getInstance().gameplayStart()
   }
 
   gameplayStop(): void {
-    try {
-      if (this._sdkAvailable) {
-        window.CrazyGames!.SDK!.game.gameplayStop()
-      }
-    } catch { /* swallow */ }
+    PlatformManager.getInstance().gameplayStop()
   }
 
   /* ------------------------------------------------------------------ */
@@ -134,12 +99,12 @@ export class AdManager {
 
   /** Request a midgame (interstitial) ad. Resolves `true` if the player watched the full ad. */
   requestMidgameAd(): Promise<boolean> {
-    return this._requestAd('midgame')
+    return PlatformManager.getInstance().requestMidgameAd()
   }
 
   /** Request a rewarded ad. Resolves `true` if the player watched the full ad. */
   requestRewardedAd(): Promise<boolean> {
-    return this._requestAd('rewarded')
+    return PlatformManager.getInstance().requestRewardedAd()
   }
 
   /* ------------------------------------------------------------------ */
@@ -153,39 +118,6 @@ export class AdManager {
   setAdCallbacks(onStart: AdCallback, onEnd: AdCallback): void {
     this._onAdStart = onStart
     this._onAdEnd = onEnd
-  }
-
-  /* ------------------------------------------------------------------ */
-  /*  Internals                                                          */
-  /* ------------------------------------------------------------------ */
-
-  private _requestAd(type: 'midgame' | 'rewarded'): Promise<boolean> {
-    return new Promise<boolean>((resolve) => {
-      try {
-        if (!this._sdkAvailable || !window.CrazyGames?.SDK?.ad) {
-          resolve(false)
-          return
-        }
-
-        this._onAdStart?.()
-
-        window.CrazyGames.SDK.ad.requestAd(type, {
-          adStarted: () => {
-            // ad has started — nothing extra needed here
-          },
-          adFinished: () => {
-            this._onAdEnd?.()
-            resolve(true)
-          },
-          adError: () => {
-            this._onAdEnd?.()
-            resolve(false)
-          },
-        })
-      } catch {
-        this._onAdEnd?.()
-        resolve(false)
-      }
-    })
+    PlatformManager.getInstance().setAdCallbacks(onStart, onEnd)
   }
 }
