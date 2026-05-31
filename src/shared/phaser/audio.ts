@@ -3,10 +3,24 @@ type SoundType = 'add' | 'perfect' | 'fail' | 'levelup' | 'tick' | 'full' | 'unl
 class AudioEngineClass {
   private ctx: AudioContext | null = null
   private _muted = false
+  private _resumeListenerAdded = false
 
   init(): void {
     if (!this.ctx) {
       this.ctx = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)()
+    }
+    // iOS Safari requires a user gesture to resume suspended AudioContext
+    if (this.ctx.state === 'suspended') {
+      this.ctx.resume()
+    }
+    // Ensure future user gestures can resume the context
+    if (!this._resumeListenerAdded) {
+      this._resumeListenerAdded = true
+      document.addEventListener('touchend', () => {
+        if (this.ctx && this.ctx.state === 'suspended') {
+          this.ctx.resume()
+        }
+      }, { once: false })
     }
   }
 
