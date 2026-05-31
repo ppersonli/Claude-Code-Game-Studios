@@ -30,6 +30,7 @@ import { EQUIPMENT, getEquipmentCost } from '../../data/equipment'
 import { STAFF, getStaffCost } from '../../data/staff'
 import { LOCATIONS } from '../../data/locations'
 import { SAVE_KEY, OFFLINE_EFFICIENCY } from '../../logic/constants'
+import { checkIdleAchievements, type IdleStats } from '../../logic/meta'
 
 const GAME_W = 480
 const GAME_H = 854
@@ -66,6 +67,18 @@ export class GameScene extends Phaser.Scene {
   floatingTexts: Phaser.GameObjects.Text[] = []
   isBrewing = false
 
+  // Meta state
+  private META_KEY = 'bubble-tea-idle-meta'
+  private metaCoins = 0
+  private metaUnlockedThemes: string[] = ['classic']
+  private metaAchievements: string[] = []
+  private metaStats: IdleStats = {
+    totalTaps: 0, totalCupsSold: 0, totalEarned: 0, level: 0,
+    prestigeCount: 0, locationsUnlocked: 1, recipesUnlocked: 1,
+    staffHired: 0, themesUnlocked: 1, dailyCompleted: 0,
+  }
+  private metaLastDaily = ''
+
   constructor() {
     super({ key: 'GameScene' })
   }
@@ -73,6 +86,7 @@ export class GameScene extends Phaser.Scene {
   create(): void {
     const saved = loadGame()
     this.state = saved ?? createInitialState()
+    this.loadMeta()
 
     // Apply offline earnings
     if (saved) {
@@ -96,6 +110,8 @@ export class GameScene extends Phaser.Scene {
       loop: true,
       callback: () => {
         tickIdleIncome(this.state)
+        this.updateMetaStats()
+        this.checkAchievements()
         this.updateUI()
         this.updateTabContent()
       },
@@ -212,6 +228,8 @@ export class GameScene extends Phaser.Scene {
 
   private handleTap(): void {
     const income = tap(this.state)
+    this.metaStats.totalTaps++
+    this.checkAchievements()
 
     // Bounce tween
     this.tweens.add({
@@ -558,5 +576,53 @@ export class GameScene extends Phaser.Scene {
       })
       this.addToTab(btnText)
     }
+  }
+
+  // ─── Meta persistence ──────────────────────────────────────────────────
+
+  private loadMeta(): void {
+    try {
+      const raw = localStorage.getItem(this.META_KEY)
+      if (raw) {
+        const data = JSON.parse(raw)
+        this.metaCoins = data.coins ?? 0
+        this.metaUnlockedThemes = Array.isArray(data.unlockedThemes) ? data.unlockedThemes : ['classic']
+        this.metaAchievements = Array.isArray(data.achievements) ? data.achievements : []
+        this.metaStats = { ...this.metaStats, ...(data.stats ?? {}) }
+        this.metaLastDaily = data.lastDailyDate ?? ''
+      }
+    } catch { /* corrupted */ }
+  }
+
+  private saveMeta(): void {
+    try {
+      localStorage.setItem(this.META_KEY, JSON.stringify({
+        coins: this.metaCoins,
+        unlockedThemes: this.metaUnlockedThemes,
+        achievements: this.metaAchievements,
+        stats: this.metaStats,
+        lastDailyDate: this.metaLastDaily,
+      }))
+    } catch { /* */ }
+  }
+
+  private updateMetaStats(): void {
+    this.metaStats.totalCupsSold = Math.max(this.metaStats.totalCupsSold, this.state.totalCupsSold)
+    this.metaStats.totalEarned = Math.max(this.metaStats.totalEarned, this.state.totalEarned)
+    this.metaStats.level = Math.max(this.metaStats.level, this.state.level)
+    this.metaStats.prestigeCount = Math.max(this.metaStats.prestigeCount, this.state.prestigeCount)
+    this.metaStats.locationsUnlocked = Math.max(this.metaStats.locationsUnlocked, this.state.unlockedLocations.length)
+    this.metaStats.recipesUnlocked = Math.max(this.metaStats.recipesUnlocked, this.state.unlockedRecipes.length)
+    this.metaStats.staffHired = Math.max(this.metaStats.staffHired,
+      Object.values(this.state.staffCounts).reduce((s, n) => s + n, 0))
+  }
+
+  private checkAchievements(): void {
+    const newAchievements = checkIdleAchievements(this.metaStats, this.metaAchievements)
+    for (const a of newAchievements) {
+      this.metaAchievements.push(a.id)
+      this.metaCoins += a.reward
+    }
+    if (newAchievements.length > 0) this.saveMeta()
   }
 }
