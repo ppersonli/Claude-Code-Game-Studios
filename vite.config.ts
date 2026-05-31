@@ -45,6 +45,7 @@ export default defineConfig({
         'idle-coffee-shop': resolve(__dirname, 'src/games/idle-coffee-shop/index.html'),
         'jelly-pop': resolve(__dirname, 'src/games/jelly-pop/index.html'),
         'sweet-sort': resolve(__dirname, 'src/games/sweet-sort/index.html'),
+        'bubble-tea-merge': resolve(__dirname, 'src/games/bubble-tea-merge/index.html'),
       },
     },
   },
