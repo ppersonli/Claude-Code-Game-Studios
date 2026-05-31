@@ -51,6 +51,7 @@ export default defineConfig({
         'waffle-wobble': resolve(__dirname, 'src/games/waffle-wobble/index.html'),
         'bubble-shooter': resolve(__dirname, 'src/games/bubble-shooter/index.html'),
         'boba-tycoon': resolve(__dirname, 'src/games/boba-tycoon/index.html'),
+        'boba-runner': resolve(__dirname, 'src/games/boba-runner/index.html'),
       },
     },
   },
