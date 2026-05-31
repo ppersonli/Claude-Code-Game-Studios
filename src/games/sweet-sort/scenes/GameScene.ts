@@ -5,6 +5,7 @@ import { COLOR_VALUES } from '../core/Color'
 import { generateLevel, getStarRating, type LevelData } from '../core/LevelGenerator'
 import { isValidMove, executeMove, checkCompletion, getDefaultSave, updateLevelResult, type SaveData } from '../core/GameState'
 import { AdManager } from '../../../services/AdManager'
+import { levelCoins, checkSweetAchievements, type SweetStats } from '../logic/meta'
 
 const GAME_WIDTH = 480
 const GAME_HEIGHT = 854
@@ -292,6 +293,23 @@ export class GameScene extends Phaser.Scene {
     updateLevelResult(save, this.currentLevel, stars, this.moveCount)
     this.saveToStorage(save)
 
+    // Meta: update stats and award coins
+    const meta = this.loadMeta()
+    meta.stats.levelsCompleted = Math.max(meta.stats.levelsCompleted, this.currentLevel)
+    meta.stats.totalStars = save.totalStars
+    meta.stats.threeStarLevels = Object.values(save.stars).filter(s => s === 3).length
+    meta.stats.highestLevel = Math.max(meta.stats.highestLevel, this.currentLevel)
+    meta.stats.totalMoves += this.moveCount
+    meta.stats.gamesPlayed++
+    const earnedCoins = levelCoins(stars)
+    meta.coins += earnedCoins
+    const newAchievements = checkSweetAchievements(meta.stats, meta.achievements)
+    for (const a of newAchievements) {
+      meta.achievements.push(a.id)
+      meta.coins += a.reward
+    }
+    this.saveMeta(meta)
+
     this.showCompletionScreen(stars)
   }
 
@@ -410,5 +428,30 @@ export class GameScene extends Phaser.Scene {
     } catch (e) {
       console.warn('Failed to save:', e)
     }
+  }
+
+  // ─── Meta persistence ──────────────────────────────────────────────────
+
+  private META_KEY = 'sweet-sort-meta'
+
+  private loadMeta(): { coins: number; unlockedThemes: string[]; achievements: string[]; stats: SweetStats; lastDailyDate: string } {
+    try {
+      const raw = localStorage.getItem(this.META_KEY)
+      if (raw) {
+        const data = JSON.parse(raw)
+        return {
+          coins: data.coins ?? 0,
+          unlockedThemes: Array.isArray(data.unlockedThemes) ? data.unlockedThemes : ['classic'],
+          achievements: Array.isArray(data.achievements) ? data.achievements : [],
+          stats: { levelsCompleted: 0, totalStars: 0, threeStarLevels: 0, highestLevel: 0, totalMoves: 0, bestCombo: 0, themesUnlocked: 1, dailyCompleted: 0, gamesPlayed: 0, ...(data.stats ?? {}) },
+          lastDailyDate: data.lastDailyDate ?? '',
+        }
+      }
+    } catch { /* corrupted */ }
+    return { coins: 0, unlockedThemes: ['classic'], achievements: [], stats: { levelsCompleted: 0, totalStars: 0, threeStarLevels: 0, highestLevel: 0, totalMoves: 0, bestCombo: 0, themesUnlocked: 1, dailyCompleted: 0, gamesPlayed: 0 }, lastDailyDate: '' }
+  }
+
+  private saveMeta(meta: ReturnType<typeof this.loadMeta>): void {
+    try { localStorage.setItem(this.META_KEY, JSON.stringify(meta)) } catch { /* */ }
   }
 }
