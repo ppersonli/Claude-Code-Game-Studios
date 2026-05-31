@@ -52,6 +52,7 @@ export default defineConfig({
         'bubble-shooter': resolve(__dirname, 'src/games/bubble-shooter/index.html'),
         'boba-tycoon': resolve(__dirname, 'src/games/boba-tycoon/index.html'),
         'boba-runner': resolve(__dirname, 'src/games/boba-runner/index.html'),
+        'boba-clicker': resolve(__dirname, 'src/games/boba-clicker/index.html'),
       },
     },
   },
