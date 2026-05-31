@@ -39,6 +39,7 @@ import {
 } from '../core'
 import { AdManager } from '../services/AdManager'
 import { AdManager as SharedAdManager } from '../../../services/AdManager'
+import { levelCoins, checkJellyAchievements, type JellyStats } from '../logic/meta'
 
 /**
  * GameScene – the main Jelly Pop gameplay scene.
@@ -53,6 +54,20 @@ export class GameScene extends Phaser.Scene {
   private selected: CellPos | null = null
   private isAnimating = false
   private sdk: any = null
+
+  // ─── Meta state ─────────────────────────────────────────────────────────────
+  private metaCoins = 0
+  private metaLevel = 0
+  private metaUnlockedThemes: string[] = ['classic']
+  private metaAchievements: string[] = []
+  private metaStats: JellyStats = {
+    totalScore: 0, highScore: 0, highestLevel: 0, totalMatches: 0,
+    totalChains: 0, bestChain: 0, specialBombs: 0, specialRainbows: 0,
+    themesUnlocked: 1, dailyCompleted: 0, gamesPlayed: 0,
+  }
+  private metaLastDaily = ''
+  private sessionMatches = 0
+  private sessionChains = 0
 
   // ─── UI refs ────────────────────────────────────────────────────────────────
   private scoreText!: Phaser.GameObjects.Text
@@ -71,6 +86,9 @@ export class GameScene extends Phaser.Scene {
 
     this.state = createInitialState({ highScore: loadHighScore() })
     this.selected = null
+    this.sessionMatches = 0
+    this.sessionChains = 0
+    this.loadMeta()
     this.isAnimating = false
 
     this.drawBackground()
@@ -667,6 +685,17 @@ export class GameScene extends Phaser.Scene {
   private triggerGameOver(): void {
     this.state.gameOver = true
 
+    // Update meta stats
+    this.metaStats.totalScore += this.state.score
+    this.metaStats.highScore = Math.max(this.metaStats.highScore, this.state.score)
+    this.metaStats.highestLevel = Math.max(this.metaStats.highestLevel, this.state.level)
+    this.metaStats.totalMatches += this.sessionMatches
+    this.metaStats.totalChains += this.sessionChains
+    this.metaStats.gamesPlayed++
+    const earnedCoins = levelCoins(this.state.score)
+    this.metaCoins += earnedCoins
+    this.saveMeta()
+
     const diff = this.state.highScore - this.state.score
     let message = 'Game Over!'
     if (diff > 0 && diff < this.state.highScore * 0.3) {
@@ -708,6 +737,15 @@ export class GameScene extends Phaser.Scene {
       })
       .setOrigin(0.5)
     gameOverGroup.add(bestLabel)
+
+    const coinsLabel = this.add
+      .text(GAME_W / 2, GAME_H / 2 + 30, `💰 +${levelCoins(this.state.score)} coins`, {
+        fontSize: '16px',
+        fontFamily: 'Arial',
+        color: '#FFD700',
+      })
+      .setOrigin(0.5)
+    gameOverGroup.add(coinsLabel)
 
     // Try Again button
     const btnGfx = this.add.graphics()
@@ -833,5 +871,37 @@ export class GameScene extends Phaser.Scene {
     } catch {
       /* noop */
     }
+  }
+
+  // ─── Meta persistence ──────────────────────────────────────────────────
+
+  private META_KEY = 'jelly-pop-meta'
+
+  private loadMeta(): void {
+    try {
+      const raw = localStorage.getItem(this.META_KEY)
+      if (raw) {
+        const data = JSON.parse(raw)
+        this.metaCoins = data.coins ?? 0
+        this.metaLevel = data.level ?? 0
+        this.metaUnlockedThemes = Array.isArray(data.unlockedThemes) ? data.unlockedThemes : ['classic']
+        this.metaAchievements = Array.isArray(data.achievements) ? data.achievements : []
+        this.metaStats = { ...this.metaStats, ...(data.stats ?? {}) }
+        this.metaLastDaily = data.lastDailyDate ?? ''
+      }
+    } catch { /* corrupted */ }
+  }
+
+  private saveMeta(): void {
+    try {
+      localStorage.setItem(this.META_KEY, JSON.stringify({
+        coins: this.metaCoins,
+        level: this.state.level,
+        unlockedThemes: this.metaUnlockedThemes,
+        achievements: this.metaAchievements,
+        stats: this.metaStats,
+        lastDailyDate: this.metaLastDaily,
+      }))
+    } catch { /* */ }
   }
 }
