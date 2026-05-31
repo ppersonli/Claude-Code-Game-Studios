@@ -228,6 +228,7 @@
       </div>
     </div>
     <SocialPanel game-name="珍珠奶茶排序" game-slug="boba-sort" share-text="来挑战珍珠奶茶排序吧！颜色分类烧脑又好玩！" />
+    <LeaderboardPanel game-slug="boba-sort" game-name="珍珠奶茶排序" />
   </div>
 </template>
 
@@ -236,6 +237,7 @@ import { ref, reactive, onUnmounted, computed } from 'vue'
 import { audioEngine } from '@shared/phaser/audio'
 import { AdManager } from '../../services/AdManager'
 import SocialPanel from '@shared/vue/SocialPanel.vue'
+import LeaderboardPanel from '@shared/vue/LeaderboardPanel.vue'
 import {
   createLevel,
   pour,

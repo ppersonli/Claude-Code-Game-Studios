@@ -3,6 +3,7 @@ import { ref, onMounted, onUnmounted } from 'vue'
 import { AdManager } from '../../services/AdManager'
 import { createPhaserGame } from './phaser/config'
 import SocialPanel from '@shared/vue/SocialPanel.vue'
+import LeaderboardPanel from '@shared/vue/LeaderboardPanel.vue'
 
 const gameContainer = ref<HTMLElement | null>(null)
 const adManager = AdManager.getInstance()
@@ -29,6 +30,7 @@ onUnmounted(() => {
 <template>
   <div ref="gameContainer" class="tycoon-container"></div>
   <SocialPanel game-name="波波帝国" game-slug="boba-tycoon" share-text="来建造你的奶茶帝国吧！超好玩的放置经营游戏！" />
+  <LeaderboardPanel game-slug="boba-tycoon" game-name="波波帝国" />
 </template>
 
 <style scoped>
