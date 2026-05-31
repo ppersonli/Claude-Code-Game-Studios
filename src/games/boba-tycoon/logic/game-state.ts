@@ -31,6 +31,12 @@ export interface TycoonState {
   // Combo
   tapCombo: number
   comboTimer: number
+  // Meta
+  unlockedThemes: string[]
+  equippedTheme: string
+  achievements: string[]
+  dailyRewardCount: number
+  lastDailyRewardDate: string
 }
 
 export function createInitialState(): TycoonState {
@@ -43,6 +49,8 @@ export function createInitialState(): TycoonState {
     dailyActive: false, dailyProgress: 0, dailyCompleted: false, dailyLastSeed: 0,
     boostActive: false, boostEndTime: 0,
     tapCombo: 0, comboTimer: 0,
+    unlockedThemes: ['classic'], equippedTheme: 'classic',
+    achievements: [], dailyRewardCount: 0, lastDailyRewardDate: '',
   }
 }
 

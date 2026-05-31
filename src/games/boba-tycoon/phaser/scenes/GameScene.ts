@@ -17,6 +17,9 @@ import { EQUIPMENT, getEquipmentCost, getEquipmentMultiplier } from '../../data/
 import { STAFF, getStaffCost, getStaffCps } from '../../data/staff'
 import { LOCATIONS } from '../../data/locations'
 import { OFFLINE_EFFICIENCY, BOOST_DURATION } from '../../logic/constants'
+import { TYCOON_THEMES, getTycoonThemeById } from '../../data/themes'
+import { TYCOON_ACHIEVEMENTS, getTycoonAchievementById } from '../../data/achievements'
+import { canBuyTycoonTheme, equipTycoonTheme, getAvailableTycoonThemes, checkTycoonAchievements, buildTycoonStats, isDailyRewardAvailable, claimDailyReward, DAILY_REWARD_COINS } from '../../logic/meta'
 
 const COLORS = {
   BG_TOP: 0x1a0a2e, BG_BOT: 0x2d1b4e,
@@ -58,6 +61,7 @@ export class GameScene extends Phaser.Scene {
     this.time.addEvent({ delay: 1000, loop: true, callback: () => {
       tickIdle(this.state)
       this.checkDaily()
+      this.checkAchievements()
       this.updateUI()
       this.refreshTab()
     }})
@@ -130,6 +134,7 @@ export class GameScene extends Phaser.Scene {
     }).setOrigin(0.5)
     this.tweens.add({ targets: popup, y: popup.y - 60, alpha: 0, duration: 700, onComplete: () => popup.destroy() })
     this.checkDaily()
+    this.checkAchievements()
     this.updateUI()
     this.refreshTab()
   }
@@ -158,14 +163,14 @@ export class GameScene extends Phaser.Scene {
   // ─── Tabs ─────────────────────────────────────────────────────────────
 
   private createTabs(): void {
-    const names = ['brew', 'recipes', 'equipment', 'staff', 'location', 'prestige', 'daily']
-    const labels = ['☕ 制作', '📖 配方', '🔧 设备', '👥 员工', '📍 分店', '⭐ 转生', '📅 日任']
+    const names = ['brew', 'recipes', 'equipment', 'staff', 'location', 'prestige', 'daily', 'themes', 'achievements']
+    const labels = ['☕制作', '📖配方', '🔧设备', '👥员工', '📍分店', '⭐转生', '📅日任', '🎨主题', '🏆成就']
     const tabY = 420
     this.add.graphics().fillStyle(0x000000, 0.3).fillRect(0, tabY, 480, 38)
     const bw = 480 / names.length
     names.forEach((n, i) => {
       const btn = this.add.text(bw * i + bw / 2, tabY + 18, labels[i], {
-        fontSize: '10px', fontFamily: 'Arial', color: '#9e9e9e',
+        fontSize: '9px', fontFamily: 'Arial', color: '#9e9e9e',
       }).setOrigin(0.5).setInteractive()
       btn.on('pointerdown', () => this.switchTab(n))
       this.tabButtons.push({ name: n, btn })
@@ -188,6 +193,8 @@ export class GameScene extends Phaser.Scene {
       case 'location': this.tabLocation(); break
       case 'prestige': this.tabPrestige(); break
       case 'daily': this.tabDaily(); break
+      case 'themes': this.tabThemes(); break
+      case 'achievements': this.tabAchievements(); break
     }
   }
 
@@ -227,6 +234,27 @@ export class GameScene extends Phaser.Scene {
         if (success) { activateBoost(this.state); this.updateUI(); this.refreshTab() }
       })
       this.addT(bt)
+    }
+    // Daily reward button
+    if (isDailyRewardAvailable(this.state.lastDailyRewardDate)) {
+      y += 45
+      const dbg = this.add.graphics()
+      dbg.fillStyle(0x00b894, 1).fillRoundedRect(140, y, 200, 32, 10)
+      this.addT(dbg)
+      const dt = this.add.text(240, y + 16, `🎁 每日奖励 +$${DAILY_REWARD_COINS}`, { fontSize: '12px', fontFamily: 'Arial', color: '#fff', fontStyle: 'bold' }).setOrigin(0.5).setInteractive()
+      dt.on('pointerdown', () => {
+        const result = claimDailyReward(this.state.lastDailyRewardDate)
+        if (result.claimed) {
+          this.state.lastDailyRewardDate = result.today
+          this.state.dailyRewardCount++
+          this.state.money += DAILY_REWARD_COINS
+          this.state.totalEarned += DAILY_REWARD_COINS
+          saveGame(this.state)
+          this.checkAchievements()
+          this.updateUI(); this.refreshTab()
+        }
+      })
+      this.addT(dt)
     }
   }
 
@@ -355,5 +383,69 @@ export class GameScene extends Phaser.Scene {
       t.on('pointerdown', () => { startDaily(this.state); this.refreshTab() })
       this.addT(t)
     }
+  }
+
+  // ─── Tab: Themes ─────────────────────────────────────────────────────
+
+  private tabThemes(): void {
+    let y = 470
+    const s = { fontSize: '11px', fontFamily: 'Arial', color: COLORS.WHITE }
+    this.addT(this.add.text(240, y, '🎨 主题商店', { fontSize: '13px', fontFamily: 'Arial', color: COLORS.GOLD_T } as any).setOrigin(0.5)); y += 28
+    const available = getAvailableTycoonThemes(this.state.money, this.state.level, this.state.unlockedThemes)
+    for (const item of available) {
+      const { theme, unlocked, canBuy } = item
+      const isEquipped = this.state.equippedTheme === theme.id
+      const label = isEquipped ? `${theme.emoji} ${theme.name} ✅` : unlocked ? `${theme.emoji} ${theme.name} 已拥有` : `${theme.emoji} ${theme.name} $${fmt(theme.cost)} Lv.${theme.requiredLevel}`
+      const color = isEquipped ? '#ffd700' : unlocked ? '#66bb6a' : canBuy ? '#f48fb1' : '#666'
+      const t = this.add.text(240, y, label, { ...s, color } as any).setOrigin(0.5)
+      if (canBuy) {
+        t.setInteractive().on('pointerdown', () => {
+          if (this.state.money >= theme.cost && this.state.level >= theme.requiredLevel) {
+            this.state.money -= theme.cost
+            this.state.unlockedThemes.push(theme.id)
+            this.state.equippedTheme = theme.id
+            saveGame(this.state)
+            this.updateUI(); this.refreshTab()
+          }
+        })
+      } else if (unlocked && !isEquipped) {
+        t.setInteractive().on('pointerdown', () => {
+          if (equipTycoonTheme(this.state.unlockedThemes, theme.id)) {
+            this.state.equippedTheme = theme.id
+            saveGame(this.state)
+            this.refreshTab()
+          }
+        })
+      }
+      this.addT(t); y += 26
+    }
+  }
+
+  // ─── Tab: Achievements ───────────────────────────────────────────────
+
+  private tabAchievements(): void {
+    let y = 470
+    const s = { fontSize: '11px', fontFamily: 'Arial', color: COLORS.WHITE }
+    const unlocked = this.state.achievements.length
+    this.addT(this.add.text(240, y, `🏆 成就 (${unlocked}/${TYCOON_ACHIEVEMENTS.length})`, { fontSize: '13px', fontFamily: 'Arial', color: COLORS.GOLD_T } as any).setOrigin(0.5)); y += 28
+    for (const a of TYCOON_ACHIEVEMENTS) {
+      const done = this.state.achievements.includes(a.id)
+      const label = done ? `${a.emoji} ${a.name} ✅` : `${a.emoji} ${a.name} — ${a.description}`
+      const color = done ? '#ffd700' : '#666'
+      this.addT(this.add.text(240, y, label, { ...s, color } as any).setOrigin(0.5)); y += 24
+    }
+  }
+
+  // ─── Achievement check helper ────────────────────────────────────────
+
+  private checkAchievements(): void {
+    const stats = buildTycoonStats(this.state, this.state.unlockedThemes, this.state.dailyRewardCount)
+    const newAchievements = checkTycoonAchievements(stats, this.state.achievements)
+    for (const a of newAchievements) {
+      this.state.achievements.push(a.id)
+      this.state.money += a.reward
+      this.state.totalEarned += a.reward
+    }
+    if (newAchievements.length > 0) saveGame(this.state)
   }
 }
