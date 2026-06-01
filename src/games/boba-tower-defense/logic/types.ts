@@ -42,6 +42,7 @@ export interface Enemy {
   isBoss: boolean
   slowUntil: number // timestamp when slow expires
   chainHit: boolean // already hit by chain lightning
+  radius: number
 }
 
 // ─── Projectile ────────────────────────────────────────────────────────

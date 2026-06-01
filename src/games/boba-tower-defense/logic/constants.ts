@@ -137,6 +137,7 @@ export const STARTING_COINS = 200
 // ─── Levels ────────────────────────────────────────────────────────────
 export const TOTAL_LEVELS = 5
 export const LEVEL_UNLOCK_COST = [0, 0, 0, 0, 0] // unlocked by completing previous
+export const SAVE_KEY = 'boba-tower-defense-save'
 
 // ─── Path waypoints (S-curve) ──────────────────────────────────────────
 export const DEFAULT_PATH: readonly { x: number; y: number }[] = [
