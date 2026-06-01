@@ -40,17 +40,12 @@ export default defineConfig({
     rollupOptions: {
       input: {
         'home': resolve(__dirname, 'src/games/index.html'),
-        'bubble-tea': resolve(__dirname, 'src/games/bubble-tea/index.html'),
         'meme-match': resolve(__dirname, 'src/games/meme-match/index.html'),
         'boba-drop': resolve(__dirname, 'src/games/boba-drop/index.html'),
         'bubble-tea-lab': resolve(__dirname, 'src/games/bubble-tea-lab/index.html'),
-        'boba-sort': resolve(__dirname, 'src/games/boba-sort/index.html'),
         'color-chaos': resolve(__dirname, 'src/games/color-chaos/index.html'),
         'idle-coffee-shop': resolve(__dirname, 'src/games/idle-coffee-shop/index.html'),
         'jelly-pop': resolve(__dirname, 'src/games/jelly-pop/index.html'),
-        'sweet-sort': resolve(__dirname, 'src/games/sweet-sort/index.html'),
-        'bubble-tea-merge': resolve(__dirname, 'src/games/bubble-tea-merge/index.html'),
-        'bubble-tea-idle': resolve(__dirname, 'src/games/bubble-tea-idle/index.html'),
         'waffle-wobble': resolve(__dirname, 'src/games/waffle-wobble/index.html'),
         'bubble-shooter': resolve(__dirname, 'src/games/bubble-shooter/index.html'),
         'boba-tycoon': resolve(__dirname, 'src/games/boba-tycoon/index.html'),
@@ -61,6 +56,6 @@ export default defineConfig({
     },
   },
   server: {
-    open: '/src/games/bubble-tea/index.html',
+    open: '/src/games/bubble-tea-lab/index.html',
   },
 })
