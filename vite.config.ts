@@ -16,12 +16,29 @@ function cgSdkOrderPlugin(): Plugin {
     name: 'cg-sdk-order',
     enforce: 'post',
     transformIndexHtml(html) {
-      // Move both SDK scripts to the head, Poki before CrazyGames
       const pokiScript = '<script src="https://game-cdn.poki.com/scripts/v2/poki-sdk.js"></script>'
       const cgScript = '<script src="https://sdk.crazygames.com/crazygames-sdk-v3.js"></script>'
-      html = html.replace(pokiScript, '')
-      html = html.replace(cgScript, '')
-      html = html.replace('<head>', `<head>\n  ${pokiScript}\n  ${cgScript}`)
+
+      // Only move scripts that are actually present in the source
+      const hasPoki = html.includes(pokiScript)
+      const hasCG = html.includes(cgScript)
+
+      // Remove originals from their current position
+      if (hasPoki) html = html.replace(pokiScript, '')
+      if (hasCG) html = html.replace(cgScript, '')
+
+      // Insert after <meta charset> so encoding is set before SDK loads
+      const scriptsToInsert = [hasPoki ? pokiScript : '', hasCG ? cgScript : ''].filter(Boolean).join('\n  ')
+      if (scriptsToInsert) {
+        const charsetMeta = '<meta charset="UTF-8">'
+        if (html.includes(charsetMeta)) {
+          html = html.replace(charsetMeta, `${charsetMeta}\n  ${scriptsToInsert}`)
+        } else {
+          // Fallback: insert after <head>
+          html = html.replace('<head>', `<head>\n  ${scriptsToInsert}`)
+        }
+      }
+
       return html
     },
   }
@@ -54,6 +71,7 @@ export default defineConfig({
         'boba-tower-defense': resolve(__dirname, 'src/games/boba-tower-defense/index.html'),
         'mochi-merge': resolve(__dirname, 'src/games/mochi-merge/index.html'),
         'number-merge-2048': resolve(__dirname, 'src/games/number-merge-2048/index.html'),
+        'block-blast-kawaii': resolve(__dirname, 'src/games/block-blast-kawaii/index.html'),
       },
     },
   },
