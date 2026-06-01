@@ -19,6 +19,7 @@ export class ResultScene extends Phaser.Scene {
     let rewarded = false
 
     this.cameras.main.setBackgroundColor(BG_COLOR)
+    this.cameras.main.fadeIn(300)
 
     const overlay = this.add.graphics()
     overlay.fillStyle(0x000000, 0.7)

@@ -13,6 +13,7 @@ export class MenuScene extends Phaser.Scene {
   create(): void {
     const save = loadSave()
     this.cameras.main.setBackgroundColor(BG_COLOR)
+    this.cameras.main.fadeIn(300)
 
     // Floating bubbles
     for (let i = 0; i < 15; i++) {
@@ -57,7 +58,10 @@ export class MenuScene extends Phaser.Scene {
     }).setOrigin(0.5)
 
     this.add.zone(GAME_W / 2, 427, 160, 55).setInteractive().on('pointerdown', () => {
-      this.scene.start('GameScene')
+      this.cameras.main.fadeOut(300, 0, 0, 0)
+      this.cameras.main.once('camerafadeoutcomplete', () => {
+        this.scene.start('GameScene')
+      })
     })
 
     // Daily challenge button
@@ -71,7 +75,10 @@ export class MenuScene extends Phaser.Scene {
       }).setOrigin(0.5)
 
       this.add.zone(GAME_W / 2, 490, 160, 40).setInteractive().on('pointerdown', () => {
-        this.scene.start('GameScene', { isDaily: true })
+        this.cameras.main.fadeOut(300, 0, 0, 0)
+        this.cameras.main.once('camerafadeoutcomplete', () => {
+          this.scene.start('GameScene', { isDaily: true })
+        })
       })
     }
 

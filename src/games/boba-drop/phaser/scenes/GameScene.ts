@@ -2,6 +2,7 @@ import Phaser from 'phaser'
 import { INGREDIENTS, MAX_INGREDIENT_LEVEL } from '../../data/ingredients'
 import {
   GAME_W,
+  GAME_H,
   CUP_TOP,
   CUP_BOTTOM,
   DROP_ZONE_Y,
@@ -40,6 +41,8 @@ export class GameScene extends Phaser.Scene {
   private gameOver = false
   private nextLevel = 0
   private merging = new Set<Phaser.GameObjects.Graphics>()
+  private mergeCombo = 0
+  private lastMergeTime = 0
   private dropSave!: DropSaveData
   private isDaily = false
   private cupGfx!: Phaser.GameObjects.Graphics
@@ -53,6 +56,7 @@ export class GameScene extends Phaser.Scene {
 
   create(data?: { isDaily?: boolean }): void {
     this.cameras.main.setBackgroundColor(BG_COLOR)
+    this.cameras.main.fadeIn(300)
     this.score = 0
     this.ingredients = []
     this.ingredientMap = new Map()
@@ -60,6 +64,8 @@ export class GameScene extends Phaser.Scene {
     this.gameOver = false
     this.nextLevel = getRandomLevel()
     this.merging = new Set()
+    this.mergeCombo = 0
+    this.lastMergeTime = 0
     this.dropSave = loadSave()
     this.isDaily = data?.isDaily ?? false
 
@@ -170,6 +176,46 @@ export class GameScene extends Phaser.Scene {
       callback: this.checkGameOver,
       callbackScope: this,
       loop: true,
+    })
+
+    // Tutorial overlay for first-time players
+    if (this.dropSave.stats.totalMerges === 0) {
+      this.showTutorial()
+    }
+  }
+
+  private showTutorial(): void {
+    const overlay = this.add.container(0, 0).setDepth(500)
+
+    const bg = this.add.graphics()
+    bg.fillStyle(0x000000, 0.6)
+    bg.fillRect(0, 0, GAME_W, GAME_H)
+    overlay.add(bg)
+
+    const card = this.add.graphics()
+    card.fillStyle(0x2d1b4e, 0.95)
+    card.fillRoundedRect(GAME_W / 2 - 140, GAME_H / 2 - 80, 280, 160, 16)
+    overlay.add(card)
+
+    const lines = [
+      '👆 點擊上方掉落配料',
+      '🟤 相同配料碰撞合成',
+      '🎯 合成越大分數越高！',
+    ]
+    lines.forEach((line, i) => {
+      const t = this.add.text(GAME_W / 2, GAME_H / 2 - 50 + i * 35, line, {
+        fontSize: '16px', fontFamily: 'Arial', color: '#fff', fontStyle: 'bold',
+      }).setOrigin(0.5)
+      overlay.add(t)
+    })
+
+    const okText = this.add.text(GAME_W / 2, GAME_H / 2 + 60, '點擊開始', {
+      fontSize: '14px', fontFamily: 'Arial', color: '#CE93D8',
+    }).setOrigin(0.5)
+    overlay.add(okText)
+
+    this.input.once('pointerdown', () => {
+      overlay.destroy()
     })
   }
 
@@ -371,6 +417,16 @@ export class GameScene extends Phaser.Scene {
     // Effects
     this.mergeParticles(mx, my, newInfo.color)
     this.mergeScorePopup(mx, my, newLevel)
+    // Polish: camera shake on merge
+    this.cameras.main.shake(150, 0.005)
+    // Polish: haptic feedback
+    if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(20)
+    // Polish: combo tracking
+    this.mergeCombo++
+    this.lastMergeTime = this.time.now
+    if (this.mergeCombo >= 3) {
+      this.showComboText(this.mergeCombo)
+    }
     newGfx.setScale(1.5)
     this.tweens.add({
       targets: newGfx,
@@ -431,6 +487,34 @@ export class GameScene extends Phaser.Scene {
     })
   }
 
+  private showComboText(combo: number): void {
+    const labels = ['', '', 'Double!', 'Triple!', 'AMAZING!', 'INCREDIBLE!']
+    const label = combo >= 5 ? 'LEGENDARY!' : labels[combo] || `${combo}x COMBO!`
+    const text = this.add
+      .text(GAME_W / 2, GAME_H / 2 - 100, `🔥 ${label}`, {
+        fontSize: '28px',
+        fontFamily: 'Arial, sans-serif',
+        color: '#FFD700',
+        fontStyle: 'bold',
+        stroke: '#000000',
+        strokeThickness: 4,
+      })
+      .setOrigin(0.5)
+      .setDepth(400)
+      .setScale(0.5)
+
+    this.tweens.add({
+      targets: text,
+      scaleX: 1.2,
+      scaleY: 1.2,
+      alpha: 0,
+      y: GAME_H / 2 - 160,
+      duration: 1000,
+      ease: 'Power2',
+      onComplete: () => text.destroy(),
+    })
+  }
+
   private checkGameOver(): void {
     if (this.gameOver) return
     const now = this.time.now
@@ -471,17 +555,25 @@ export class GameScene extends Phaser.Scene {
     }
 
     this.time.delayedCall(1500, () => {
-      this.scene.start('ResultScene', {
-        score: this.score,
-        highScore: this.dropSave.highScore,
-        scoreCoins: gameResult.scoreCoins,
-        dailyCoins: gameResult.dailyCoins,
-        newAchievements: gameResult.newAchievements.map(a => ({ name: a.name, emoji: a.emoji, reward: a.reward })),
+      this.cameras.main.fadeOut(300, 0, 0, 0)
+      this.cameras.main.once('camerafadeoutcomplete', () => {
+        this.scene.start('ResultScene', {
+          score: this.score,
+          highScore: this.dropSave.highScore,
+          scoreCoins: gameResult.scoreCoins,
+          dailyCoins: gameResult.dailyCoins,
+          newAchievements: gameResult.newAchievements.map(a => ({ name: a.name, emoji: a.emoji, reward: a.reward })),
+        })
       })
     })
   }
 
   update(time: number): void {
+    // Combo decay
+    if (this.mergeCombo > 0 && time - this.lastMergeTime > 2000) {
+      this.mergeCombo = 0
+    }
+
     for (const gfx of this.ingredients) {
       const body = gfx.getData('body') as MatterJS.BodyType
       if (!body) continue
