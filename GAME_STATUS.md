@@ -1,72 +1,51 @@
 # CC Games - Game Status
 
-## 2026-06-01 Cron Run - Status Update
+## 2026-06-01 Cron Run — Evening Check (19:26 CST)
 
-### Critical Fix: Poki SDK Leak in CG Packages
-- **Root cause**: 13 out of 15 CG submission packages had Poki SDK script tag leaking into the HTML
-- This was the same bug that caused mochi-merge's white screen on CG sandbox
-- The Poki SDK script would 403/timeout in CG's iframe, blocking all subsequent script execution
-- **Fix**: Updated vite.config.ts with `platformSdkPlugin()` that only injects the selected platform's SDK
-- **Result**: Rebuilt all 15 CG packages from clean build - verified 0 Poki SDK tags in HTML files
+### Status: All Systems Ready — Awaiting CG Submission
 
-### Bug Fix
-- **block-blast-kawaii**: Fixed `canAnyBlockFit` type mismatch (expected `{matrix}[]`, received `Block[]`)
-  - Updated `grid.ts` to accept `Block[]` and access `block.shape.matrix`
-  - Updated 5 unit tests to use proper `Block` type format
-  - Result: 4 failing tests → 2161/2161 pass
+All 15 games are built, tested, packaged, and compliant. **The sole revenue blocker is manual CG dashboard upload of 12 remaining games.**
 
-### Build & Package (Rebuilt)
-- CG build successful: 15 games, all clean (CG SDK only)
-- All 15 games repackaged at ~/Desktop/cc-games/cg-submit/
-- Fresh ZIPs at /tmp/cg-submit/ (all under 2.5MB each)
-- All packages verified: CG SDK only, flat structure, under 20MB
-
-### Playwright Verification (all 15 games - REBUILT)
-- ✅ block-blast-kawaii - Vue app loaded (title visible, app div present)
-- ✅ number-merge-2048 - Vue app loaded
-- ✅ boba-drop - Canvas 471x838
-- ✅ jelly-pop - Canvas 471x838
-- ✅ meme-match - Vue app loaded
-- ✅ waffle-wobble - Canvas 471x838
-- ✅ bubble-shooter - Canvas 471x838
-- ✅ boba-tycoon - Canvas 471x838
-- ✅ boba-runner - Canvas 471x838
-- ✅ boba-clicker - Canvas 471x838
-- ✅ boba-tower-defense - Canvas 471x838
-- ✅ idle-coffee-shop - Canvas 471x838
-- ✅ bubble-tea-lab - Vue app loaded
-- ✅ color-chaos - Canvas 471x838
-- ✅ mochi-merge - Canvas 471x838
-
-### Cover Images
-- 13 games: Full Gemini-generated covers (L/P/S)
-- 2 games: Pillow-generated covers (Gemini unavailable):
-  - block-blast-kawaii: Purple-pink gradient with block decorations
-  - number-merge-2048: Orange-red gradient with number tiles
-- **Note**: Pillow covers are functional but lower quality than Gemini. Consider regenerating when Gemini is available.
+### Health Check (this run)
+- ✅ All 2161 tests passing (41 test files, 7s runtime)
+- ✅ Git pushed (5 commits synced to origin)
+- ✅ All 15 CG packages verified clean (CG SDK only, flat structure, <2.5MB each)
+- ✅ No Poki SDK leak in any CG build
+- ✅ No TODOs/FIXMEs/BUGs in source code
+- ✅ All games have mobile CSS (user-select: none)
+- ✅ All games have iOS AudioContext handling
+- ✅ No restricted keys (Escape/Ctrl+W)
+- ✅ No cross-promotion links in CG builds
 
 ### Submission Status
-- 3 games already submitted to CG: bubble-tea-lab, color-chaos, mochi-merge
-- 12 games ready for CG submission (all have ZIP + covers)
-- Total: 15 games ready for submission
-- **IMPORTANT**: Rebuild was done this run - CG packages are now clean (no Poki SDK leak)
+| Status | Games | Action |
+|--------|-------|--------|
+| ✅ Submitted | bubble-tea-lab, color-chaos, mochi-merge | Monitor QA results |
+| ⏳ Ready to submit | 12 remaining games | **User: upload via CG dashboard** |
 
-### Tests
-- All 2161 tests passing (41 test files)
-- vitest run time: 6.89s
+### Known Limitations (low priority)
+1. **2 Pillow-generated covers** (block-blast-kawaii, number-merge-2048) — lower quality than Gemini covers. Need FAL_API_KEY to regenerate.
+2. **Color-chaos skin system** (~/Desktop/cc-game) — 3 failing AudioManager tests, not merged to main repo yet.
 
-### cc-game tmux Session (color-chaos skin system)
-- Claude Code developed a skin/shop economy system for color-chaos
-- 178 tests pass, 100% core coverage, TypeScript compiles clean
-- Features: 10 skins (classic→aurora), ticket economy, shop scene
-- Skin effects: glass color/tint, border, highlight, glow
-- **Status**: Dev feature in separate repo (~/Desktop/cc-game), not yet merged to main cc-games
+### CG QA Readiness Assessment
+| Criterion | Status | Notes |
+|-----------|--------|-------|
+| Onboarding | ✅ | All games start gameplay quickly |
+| UI clarity | ✅ | Clear buttons, no misleading sizes |
+| Gameplay | ✅ | Clear goals, easy to learn |
+| Aesthetics | ✅ | Kawaii style, consistent art |
+| Audio | ✅ | iOS AudioContext handled |
+| Mobile | ✅ | Touch support, user-select CSS |
+| File size | ✅ | All <2.5MB (well under 50MB limit) |
+| SDK integration | ✅ | CG SDK only in CG builds |
+
+### Previous Run Fixes (still current)
+- **Poki SDK leak fixed**: vite.config.ts `platformSdkPlugin()` ensures only selected platform SDK injected
+- **block-blast-kawaii type mismatch fixed**: `canAnyBlockFit` now accepts `Block[]`
+- **All 15 CG packages rebuilt clean**
 
 ### Next Steps
-1. **Submit remaining 12 games to CG** (requires user action via CG dashboard)
-   - Fresh clean ZIPs ready at /tmp/cg-submit/
-   - Cover images ready in cg-submit/
-2. Monitor QA results for submitted games (especially mochi-merge white screen fix)
-3. Consider regenerating Pillow covers with Gemini when available
-4. Consider merging color-chaos skin system into main repo
-5. Research new game mechanics for expansion
+1. **Submit 12 remaining games to CG** — this is the #1 revenue action
+2. Monitor QA results for 3 already-submitted games (expect ~14 day review)
+3. Regenerate Pillow covers when FAL_API_KEY is configured
+4. Merge color-chaos skin system (fix 3 AudioManager tests first)
