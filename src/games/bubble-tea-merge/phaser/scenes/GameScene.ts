@@ -14,6 +14,8 @@ import { calculateMergeScore } from '../../logic/scoring'
 import { loadSave, saveData } from '../../logic/save'
 import { onMerge, onGameEnd, type MergeSaveData } from '../../logic/meta'
 import { drawIngredient, drawSparkles } from '../helpers'
+import { fadeIn, addHapticFeedback, showComboText } from '../../../../shared/utils/poki-polish'
+
 
 interface IngredientGfxData {
   gfx: Phaser.GameObjects.Graphics
@@ -45,6 +47,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   create(data?: { isDaily?: boolean }): void {
+    fadeIn(this)
     this.score = 0
     this.ingredients = []
     this.ingredientMap = new Map()
@@ -311,6 +314,8 @@ export class GameScene extends Phaser.Scene {
     // Score + coins
     const points = calculateMergeScore(dataA.level)
     this.score += points
+    addHapticFeedback('medium')
+    if (this.ingredients.length > 0) showComboText(this, Math.min(this.ingredients.length, 6))
     this.combo++
     if (this.combo > this.maxCombo) this.maxCombo = this.combo
     const earnedCoins = onMerge(this.mergeSave, mergeResult.newLevel, this.combo)

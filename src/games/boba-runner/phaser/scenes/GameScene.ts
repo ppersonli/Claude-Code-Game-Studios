@@ -13,6 +13,8 @@ import {
 } from '../../logic/constants'
 import { OBSTACLES } from '../../data/obstacles'
 import { POWERUPS } from '../../data/powerups'
+import { fadeIn, addHapticFeedback } from '../../../../shared/utils/poki-polish'
+
 
 const COLORS = {
   SKY_TOP: 0x1a0a2e, SKY_BOT: 0x2d1b4e,
@@ -48,6 +50,7 @@ export class GameScene extends Phaser.Scene {
   constructor() { super({ key: 'GameScene' }) }
 
   create(): void {
+    fadeIn(this)
     const save = loadSave()
     this.state = createInitialState(save.highScore)
     this.bgTiles = []
@@ -87,7 +90,7 @@ export class GameScene extends Phaser.Scene {
     this.input.on('pointerdown', (ptr: Phaser.Input.Pointer) => {
       if (this.state.gameOver) return
       if (ptr.y > GAME_H / 2) { slide(this.state, this.time.now); this.sessionSlides++ }
-      else { jump(this.state); this.sessionJumps++ }
+      else { jump(this.state); this.sessionJumps++; addHapticFeedback('light') }
     })
     this.input.keyboard?.on('keydown-SPACE', () => { if (!this.state.gameOver) { jump(this.state); this.sessionJumps++ } })
     this.input.keyboard?.on('keydown-DOWN', () => { if (!this.state.gameOver) { slide(this.state, this.time.now); this.sessionSlides++ } })

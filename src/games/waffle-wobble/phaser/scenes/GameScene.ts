@@ -10,6 +10,8 @@ import { TOPPINGS, getToppingById, MAX_TOPPINGS_PER_ORDER } from '../../data/top
 import { COOK_TIME, BURN_TIME, LEVEL_DURATION, GAME_W, GAME_H, SERVE_ANIM_TIME } from '../../logic/constants'
 import { saveGame, loadGame } from '../../logic/save'
 import { checkWaffleAchievements, type WaffleStats } from '../../logic/meta'
+import { fadeIn, addHapticFeedback } from '../../../../shared/utils/poki-polish'
+
 
 const COLORS = {
   BG: 0xFFF5E6,
@@ -57,6 +59,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   create(): void {
+    fadeIn(this)
     const saved = loadGame()
     this.state = { ...createInitialState(), ...saved, customers: [], waffle: { state: 'empty', startedAt: 0, addedToppings: [] }, gameOver: false, paused: false }
     this.loadMeta()

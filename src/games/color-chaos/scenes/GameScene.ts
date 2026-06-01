@@ -5,6 +5,8 @@ import { AudioManager } from '../services/AudioManager'
 import { SkinManager } from '../services/SkinManager'
 import { TubeRenderer } from '../renderers/TubeRenderer'
 import { AdManager } from '../services/AdManager'
+import { fadeIn, addHapticFeedback } from '../../../shared/utils/poki-polish'
+
 
 /** Maximum undos allowed per level */
 const MAX_UNDOS = 10
@@ -59,6 +61,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   create(): void {
+    fadeIn(this)
     const { width, height } = this.scale
 
     // Set up ad callbacks

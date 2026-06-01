@@ -5,6 +5,8 @@ import { getCellCenter, getNearestCell, type Grid } from '../../logic/grid'
 import { createLevelState, shootBubble, type GameState } from '../../logic/game-state'
 import { saveProgress, loadSave, saveFull } from '../../logic/save'
 import { levelCoins } from '../../logic/meta'
+import { fadeIn, addHapticFeedback } from '../../../../shared/utils/poki-polish'
+
 
 export class GameScene extends Phaser.Scene {
   private state!: GameState
@@ -27,6 +29,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   create(data: { level?: number }): void {
+    fadeIn(this)
     const level = data.level ?? 1
     const save = loadSave()
     this.state = createLevelState(level, save.highScore, save.levelsCompleted)
@@ -213,6 +216,7 @@ export class GameScene extends Phaser.Scene {
       const target = hitBubble ? this.findEmptyNeighbor(cell.row, cell.col, gfx.x, gfx.y) : cell
       if (target && this.state.grid[target.row]?.[target.col] === null) {
         const result = shootBubble(this.state, target.row, target.col)
+        addHapticFeedback('light')
         this.sessionPopped += result.popped
         this.sessionFallen += result.fallen
         this.sessionShots++

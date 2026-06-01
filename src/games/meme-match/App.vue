@@ -241,6 +241,8 @@ function handleFlip(cardId: number) {
       }
       if (state.status === 'won') {
         handleGameEnd()
+      } else {
+        if (navigator.vibrate) navigator.vibrate(20)
       }
     }, 600)
   }

@@ -6,6 +6,8 @@ import { generateLevel, getStarRating, type LevelData } from '../core/LevelGener
 import { isValidMove, executeMove, checkCompletion, getDefaultSave, updateLevelResult, type SaveData } from '../core/GameState'
 import { AdManager } from '../../../services/AdManager'
 import { levelCoins, checkSweetAchievements, type SweetStats } from '../logic/meta'
+import { fadeIn, addHapticFeedback } from '../../../shared/utils/poki-polish'
+
 
 const GAME_WIDTH = 480
 const GAME_HEIGHT = 854
@@ -48,6 +50,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   create(): void {
+    fadeIn(this)
     this.cameras.main.setBackgroundColor(0xFFF5E6)
     this.createBackground()
     this.createUI()
@@ -259,6 +262,7 @@ export class GameScene extends Phaser.Scene {
 
     executeMove(this.tubes, from, to)
     this.moveCount++
+      addHapticFeedback('light')
 
     this.redrawCandies()
 

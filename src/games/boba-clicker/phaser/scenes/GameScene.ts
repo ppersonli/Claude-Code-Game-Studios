@@ -11,6 +11,8 @@ import { UPGRADES, MILESTONES, getUpgradeCost } from '../../data/upgrades'
 import { saveGame, loadGame } from '../../logic/save'
 import { BOOST_DURATION } from '../../logic/constants'
 import { AdManager } from '../../../../services/AdManager'
+import { fadeIn, addHapticFeedback } from '../../../../shared/utils/poki-polish'
+
 
 const C = {
   BG: 0x1a0a2e, GOLD: 0xffd700, PINK: 0xFF69B4, PURPLE: 0xce93d8,
@@ -33,6 +35,7 @@ export class GameScene extends Phaser.Scene {
   constructor() { super({ key: 'GameScene' }) }
 
   create(): void {
+    fadeIn(this)
     this.state = loadGame() ?? createInitialState()
     this.drawBg()
     this.createPearl()

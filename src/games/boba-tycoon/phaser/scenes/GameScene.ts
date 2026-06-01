@@ -20,6 +20,8 @@ import { OFFLINE_EFFICIENCY, BOOST_DURATION } from '../../logic/constants'
 import { TYCOON_THEMES, getTycoonThemeById } from '../../data/themes'
 import { TYCOON_ACHIEVEMENTS, getTycoonAchievementById } from '../../data/achievements'
 import { canBuyTycoonTheme, equipTycoonTheme, getAvailableTycoonThemes, checkTycoonAchievements, buildTycoonStats, isDailyRewardAvailable, claimDailyReward, DAILY_REWARD_COINS } from '../../logic/meta'
+import { fadeIn, addHapticFeedback } from '../../../../shared/utils/poki-polish'
+
 
 const COLORS = {
   BG_TOP: 0x1a0a2e, BG_BOT: 0x2d1b4e,
@@ -44,6 +46,7 @@ export class GameScene extends Phaser.Scene {
   constructor() { super({ key: 'GameScene' }) }
 
   create(): void {
+    fadeIn(this)
     const saved = loadGame()
     this.state = saved ?? createInitialState()
     if (saved) {
@@ -128,6 +131,7 @@ export class GameScene extends Phaser.Scene {
 
   private handleTap(): void {
     const income = tap(this.state)
+    addHapticFeedback('light')
     this.tweens.add({ targets: this.tapArea, scaleX: 1.08, scaleY: 0.92, duration: 50, yoyo: true })
     const popup = this.add.text(240 + (Math.random() - 0.5) * 50, 230, '+' + fmt(income), {
       fontSize: '18px', fontFamily: 'Arial', color: COLORS.GOLD_T, fontStyle: 'bold', stroke: '#000', strokeThickness: 2,

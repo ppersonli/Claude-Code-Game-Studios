@@ -40,6 +40,8 @@ import {
 import { AdManager } from '../services/AdManager'
 import { AdManager as SharedAdManager } from '../../../services/AdManager'
 import { levelCoins, checkJellyAchievements, type JellyStats } from '../logic/meta'
+import { fadeIn, addHapticFeedback, showComboText, spawnParticles } from '../../../shared/utils/poki-polish'
+
 
 /**
  * GameScene – the main Jelly Pop gameplay scene.
@@ -81,6 +83,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   create(): void {
+    fadeIn(this)
     // Expose for external testing
     ;(window as any).__PHASER_GAME = this.game
 
@@ -424,6 +427,8 @@ export class GameScene extends Phaser.Scene {
     }
 
     this.state.score += matchScore + specialBonus
+        addHapticFeedback('medium')
+        if (this.state.chainCount >= 2) showComboText(this, this.state.chainCount)
     if (this.state.score > this.state.highScore) {
       this.state.highScore = this.state.score
       saveHighScore(this.state.highScore)

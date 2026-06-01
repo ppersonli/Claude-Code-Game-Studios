@@ -24,6 +24,8 @@ import {
 } from '../composables/useGameLogic'
 import { AdManager } from '../../../services/AdManager'
 import { checkCafeAchievements, type CafeStats } from '../composables/useMeta'
+import { fadeIn, addHapticFeedback } from '../../../shared/utils/poki-polish'
+
 
 const GAME_W = 480
 const GAME_H = 854
@@ -483,6 +485,7 @@ export class GameScene extends Phaser.Scene {
 
   handleMakeCoffee() {
     const earnings = makeCoffee(this.state)
+    addHapticFeedback('light')
     this.metaStats.totalClicks++
     this.metaStats.totalCups++
     this.metaStats.totalEarned = Math.max(this.metaStats.totalEarned, this.state.totalEarned)
