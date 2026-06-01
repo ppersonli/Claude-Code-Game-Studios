@@ -28,14 +28,41 @@ export class LevelGenerator {
     const filledTubeCount = colorCount
     const totalTubes = filledTubeCount + emptyTubeCount
 
-    // Create sorted tubes first
-    const initialTubes: number[][] = []
-    for (let i = 0; i < filledTubeCount; i++) {
-      const tube: number[] = []
+    // Build flat pool: each color appears `tubeCapacity` times
+    const pool: number[] = []
+    for (let color = 0; color < colorCount; color++) {
       for (let j = 0; j < tubeCapacity; j++) {
-        tube.push(i)
+        pool.push(color)
       }
-      initialTubes.push(tube)
+    }
+
+    // Shuffle the flat pool so colors are mixed across tubes
+    const rng = Math.random
+    for (let i = pool.length - 1; i > 0; i--) {
+      const j = Math.floor(rng() * (i + 1))
+      ;[pool[i], pool[j]] = [pool[j], pool[i]]
+    }
+
+    // Distribute into tubes by capacity
+    const initialTubes: number[][] = Array.from({ length: filledTubeCount }, () => [])
+    for (let i = 0; i < pool.length; i++) {
+      initialTubes[i % filledTubeCount].push(pool[i])
+    }
+
+    // Ensure no tube starts fully sorted — if so, re-shuffle and retry
+    let attempts = 0
+    while (attempts < 20 && initialTubes.some(t =>
+      t.length === tubeCapacity && new Set(t).size === 1
+    )) {
+      for (let i = pool.length - 1; i > 0; i--) {
+        const j = Math.floor(rng() * (i + 1))
+        ;[pool[i], pool[j]] = [pool[j], pool[i]]
+      }
+      for (let i = 0; i < filledTubeCount; i++) initialTubes[i] = []
+      for (let i = 0; i < pool.length; i++) {
+        initialTubes[i % filledTubeCount].push(pool[i])
+      }
+      attempts++
     }
 
     // Add empty tubes
@@ -43,13 +70,10 @@ export class LevelGenerator {
       initialTubes.push([])
     }
 
-    // Shuffle the tubes to randomize the puzzle
-    const shuffled = LevelGenerator.shuffleArray([...initialTubes])
-
     return {
       tubeCount: totalTubes,
       tubeCapacity,
-      initialTubes: shuffled,
+      initialTubes,
       colorCount,
     }
   }

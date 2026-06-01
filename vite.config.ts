@@ -56,6 +56,6 @@ export default defineConfig({
     },
   },
   server: {
-    open: '/src/games/bubble-tea-lab/index.html',
+    
   },
 })
