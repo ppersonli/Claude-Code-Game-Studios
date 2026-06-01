@@ -6,37 +6,35 @@ import type { Plugin } from 'vite'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 
+// PLATFORM env var: 'cg' or 'poki' — controls which SDK is injected
+const PLATFORM = process.env.PLATFORM || 'cg'
+
 /**
- * Custom plugin to ensure CrazyGames SDK script tag appears BEFORE
- * Vite's module scripts in the built HTML. Without this, Vite reorders
- * scripts and window.CrazyGames is undefined when the game initializes.
+ * Injects the platform SDK script tag BEFORE Vite's module scripts.
+ * Only injects the SDK for the selected platform (cg or poki).
+ * Also reorders scripts so SDK loads before game code.
  */
-function cgSdkOrderPlugin(): Plugin {
+function platformSdkPlugin(): Plugin {
+  const cgScript = '<script src="https://sdk.crazygames.com/crazygames-sdk-v3.js"></script>'
+  const pokiScript = '<script src="https://game-cdn.poki.com/scripts/v2/poki-sdk.js"></script>'
+
   return {
-    name: 'cg-sdk-order',
+    name: 'platform-sdk-order',
     enforce: 'post',
     transformIndexHtml(html) {
-      const pokiScript = '<script src="https://game-cdn.poki.com/scripts/v2/poki-sdk.js"></script>'
-      const cgScript = '<script src="https://sdk.crazygames.com/crazygames-sdk-v3.js"></script>'
+      // Determine which SDK to inject based on PLATFORM
+      const sdkScript = PLATFORM === 'poki' ? pokiScript : cgScript
 
-      // Only move scripts that are actually present in the source
-      const hasPoki = html.includes(pokiScript)
-      const hasCG = html.includes(cgScript)
+      // Remove any existing SDK tags (source HTML shouldn't have them, but be safe)
+      html = html.replace(pokiScript, '')
+      html = html.replace(cgScript, '')
 
-      // Remove originals from their current position
-      if (hasPoki) html = html.replace(pokiScript, '')
-      if (hasCG) html = html.replace(cgScript, '')
-
-      // Insert after <meta charset> so encoding is set before SDK loads
-      const scriptsToInsert = [hasPoki ? pokiScript : '', hasCG ? cgScript : ''].filter(Boolean).join('\n  ')
-      if (scriptsToInsert) {
-        const charsetMeta = '<meta charset="UTF-8">'
-        if (html.includes(charsetMeta)) {
-          html = html.replace(charsetMeta, `${charsetMeta}\n  ${scriptsToInsert}`)
-        } else {
-          // Fallback: insert after <head>
-          html = html.replace('<head>', `<head>\n  ${scriptsToInsert}`)
-        }
+      // Inject the correct SDK after <meta charset>
+      const charsetMeta = '<meta charset="UTF-8">'
+      if (html.includes(charsetMeta)) {
+        html = html.replace(charsetMeta, `${charsetMeta}\n  ${sdkScript}`)
+      } else {
+        html = html.replace('<head>', `<head>\n  ${sdkScript}`)
       }
 
       return html
@@ -45,7 +43,7 @@ function cgSdkOrderPlugin(): Plugin {
 }
 
 export default defineConfig({
-  plugins: [vue(), cgSdkOrderPlugin()],
+  plugins: [vue(), platformSdkPlugin()],
   base: './',
   resolve: {
     alias: {
@@ -54,6 +52,7 @@ export default defineConfig({
     },
   },
   build: {
+    outDir: `dist/${PLATFORM}`,
     rollupOptions: {
       input: {
         'home': resolve(__dirname, 'src/games/index.html'),
@@ -76,6 +75,5 @@ export default defineConfig({
     },
   },
   server: {
-    
   },
 })

@@ -317,14 +317,14 @@ describe('clearLines', () => {
 
 describe('canAnyBlockFit', () => {
   it('test_empty_grid_any_fits', () => {
-    expect(canAnyBlockFit(createEmptyGrid(), [{ matrix: [[1]] }])).toBe(true)
+    expect(canAnyBlockFit(createEmptyGrid(), [{ shape: { type: 'single', matrix: [[1]] }, colorIndex: 0 }])).toBe(true)
   })
   it('test_full_grid_none_fits', () => {
     const grid = createEmptyGrid()
     for (let r = 0; r < 10; r++)
       for (let c = 0; c < 10; c++)
         grid[r][c] = 1
-    expect(canAnyBlockFit(grid, [{ matrix: [[1]] }])).toBe(false)
+    expect(canAnyBlockFit(grid, [{ shape: { type: 'single', matrix: [[1]] }, colorIndex: 0 }])).toBe(false)
   })
   it('test_single_gap_fits_single', () => {
     const grid = createEmptyGrid()
@@ -332,7 +332,7 @@ describe('canAnyBlockFit', () => {
       for (let c = 0; c < 10; c++)
         grid[r][c] = 1
     grid[5][5] = null
-    expect(canAnyBlockFit(grid, [{ matrix: [[1]] }])).toBe(true)
+    expect(canAnyBlockFit(grid, [{ shape: { type: 'single', matrix: [[1]] }, colorIndex: 0 }])).toBe(true)
   })
   it('test_single_gap_no_fit_o_block', () => {
     const grid = createEmptyGrid()
@@ -340,7 +340,7 @@ describe('canAnyBlockFit', () => {
       for (let c = 0; c < 10; c++)
         grid[r][c] = 1
     grid[5][5] = null
-    expect(canAnyBlockFit(grid, [{ matrix: [[1, 1], [1, 1]] }])).toBe(false)
+    expect(canAnyBlockFit(grid, [{ shape: { type: 'O', matrix: [[1, 1], [1, 1]] }, colorIndex: 0 }])).toBe(false)
   })
   it('test_empty_blocks_array', () => {
     expect(canAnyBlockFit(createEmptyGrid(), [])).toBe(false)

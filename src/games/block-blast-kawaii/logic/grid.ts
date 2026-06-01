@@ -3,6 +3,7 @@
  * Pure functions for placement, line clearing, and validity checks.
  */
 import { GRID_SIZE } from './constants'
+import type { Block } from './blocks'
 
 export type Grid = (number | null)[][] // null = empty, number = color index
 
@@ -99,11 +100,11 @@ export function clearLines(grid: Grid): { grid: Grid; linesCleared: number } {
 }
 
 /** Check if ANY block from a set can be placed anywhere on the grid */
-export function canAnyBlockFit(grid: Grid, blocks: { matrix: number[][] }[]): boolean {
+export function canAnyBlockFit(grid: Grid, blocks: Block[]): boolean {
   for (const block of blocks) {
     for (let r = 0; r < GRID_SIZE; r++) {
       for (let c = 0; c < GRID_SIZE; c++) {
-        if (canPlace(grid, block.matrix, r, c)) return true
+        if (canPlace(grid, block.shape.matrix, r, c)) return true
       }
     }
   }
