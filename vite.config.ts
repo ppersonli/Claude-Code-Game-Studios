@@ -52,6 +52,8 @@ export default defineConfig({
         'boba-runner': resolve(__dirname, 'src/games/boba-runner/index.html'),
         'boba-clicker': resolve(__dirname, 'src/games/boba-clicker/index.html'),
         'boba-tower-defense': resolve(__dirname, 'src/games/boba-tower-defense/index.html'),
+        'mochi-merge': resolve(__dirname, 'src/games/mochi-merge/index.html'),
+        'number-merge-2048': resolve(__dirname, 'src/games/number-merge-2048/index.html'),
       },
     },
   },
