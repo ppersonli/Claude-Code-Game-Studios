@@ -10,6 +10,7 @@ export interface Ingredient {
   color: string
   locked?: boolean
   unlockCost?: number
+  seasonal?: 'spring' | 'halloween' | 'christmas' // 季节限定标记
 }
 
 // === Customer ===
@@ -23,6 +24,7 @@ export interface Customer {
   tipBonus?: number
   locked?: boolean
   unlockCost?: number
+  personalityId?: string // 关联到顾客AI性格
 }
 
 // === Achievement ===

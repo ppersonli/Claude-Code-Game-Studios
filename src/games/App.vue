@@ -21,6 +21,7 @@ const games: Game[] = [
   { slug: 'boba-runner', name: '波波快跑', desc: '无尽跑酷，躲避障碍收集道具', emoji: '🏃', color: '#10b981', tag: '跑酷' },
   { slug: 'boba-clicker', name: '波波点击', desc: '疯狂点击，升级prestige', emoji: '👆', color: '#8b5cf6', tag: '点击' },
   { slug: 'boba-tower-defense', name: '波波塔防', desc: '合成升级，防御入侵者', emoji: '🏰', color: '#ef4444', tag: '塔防' },
+  { slug: 'orbit-odyssey', name: '轨道奥德赛', desc: '发射飞船，探索宇宙，Prestige循环', emoji: '🚀', color: '#00d4ff', tag: '放置' },
 ]
 
 function play(slug: string) {

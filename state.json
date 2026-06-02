@@ -1,0 +1,27 @@
+{
+  "games": {
+    "block-blast-kawaii": {
+      "visual_quality": "done"
+    },
+    "jelly-pop": {
+      "visual_quality": "icon_done",
+      "assets_generated": ["icon-game.webp"]
+    },
+    "number-merge-2048": {
+      "visual_quality": "icon_done",
+      "assets_generated": ["icon-game.webp"]
+    },
+    "waffle-wobble": {
+      "visual_quality": "bg_done",
+      "assets_generated": ["bg-shop.webp"]
+    },
+    "bubble-tea-lab": {
+      "visual_quality": "in_progress",
+      "assets_generated": [
+        "ingredients/sakura_jelly.webp",
+        "ingredients/sakura_syrup.webp"
+      ],
+      "missing_count": 28
+    }
+  }
+}

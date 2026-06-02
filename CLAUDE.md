@@ -1,5 +1,89 @@
 # Claude Code Game Studios -- cc-games 项目
 
+## ⚠️ 美术资源获取（最重要！）
+
+**你不准自己画图！所有美术资源由Gemini AI生成。**
+
+### 接口1: gen-art.py — 直接生成（推荐）
+直接调用Gemini生成图片，**立即可用**，不用等美工。
+
+```bash
+# 单张生成
+python3 ~/.hermes/scripts/gen-art.py \
+  --desc "low-poly outer space, neon planets, starfield" \
+  --ratio 16:9 \
+  --output ~/Desktop/cc-games/src/games/orbit-odyssey/public/assets/bg-game.webp
+
+# 生成+自动抠图（图标/按钮/角色用）
+python3 ~/.hermes/scripts/gen-art.py \
+  --desc "cute rocket ship, flat design, bright colors" \
+  --ratio 1:1 \
+  --output ~/Desktop/cc-games/src/games/orbit-odyssey/public/assets/icon.webp \
+  --remove-bg
+
+# 批量生成（用 ;; 分隔，每个是 比例|描述）
+python3 ~/.hermes/scripts/gen-art.py \
+  --project orbit-odyssey \
+  --batch "16:9|low-poly outer space, neon planets ;; 1:1|cute rocket ship, flat design ;; 1:1|blue gradient play button" \
+  --dir ~/Desktop/cc-games/src/games/orbit-odyssey/public/assets
+
+# 批量+自动抠图
+python3 ~/.hermes/scripts/gen-art.py \
+  --project orbit-odyssey \
+  --batch "1:1|cute rocket ship ;; 1:1|blue play button" \
+  --dir ~/Desktop/cc-games/src/games/orbit-odyssey/public/assets \
+  --remove-bg
+```
+
+### 参数说明
+- **--desc**: 图片描述（**用英文，Gemini英文生图质量更高**）
+- **--ratio**: 1:1 / 16:9 / 9:16 / 4:3（默认1:1）
+- **--output**: 输出文件路径（必须.webp格式）
+- **--image**: 参考图片路径（可选，做image-to-image）
+- **--remove-bg**: 自动rembg抠图（图标/按钮/角色必须加）
+- **--timeout**: 超时秒数（默认90）
+- **--project**: 项目名（批量模式）
+- **--batch**: 批量请求，格式 "比例|描述 ;; 比例|描述"
+- **--dir**: 批量模式输出目录
+
+### 接口2: request-art.py — 队列模式（备选）
+写入请求队列，美工每3分钟批量处理。适合大量图片。
+
+```bash
+python3 ~/.hermes/scripts/request-art.py \
+  --project orbit-odyssey \
+  --batch "背景|16:9|low-poly太空 ;; 图标|1:1|火箭飞船" \
+  --dir ~/Desktop/cc-games/src/games/orbit-odyssey/public/assets
+```
+
+### 使用建议
+- **1-3张图** → 用 gen-art.py（立即出图）
+- **5张以上** → 用 gen-art.py --batch（批量生成，每张间隔15秒）
+- **图标/按钮/角色** → 必须加 --remove-bg（自动抠图）
+- **背景/封面** → 不加 --remove-bg（保留背景）
+
+### 抠图规则
+- 图标/按钮/角色/道具 → 必须 --remove-bg
+- 背景/封面 → 不抠图
+- rembg用miniconda python（自动处理，不用操心）
+
+### 禁止事项
+- ❌ 不准用 Phaser Graphics API 画圈圈矩形当美术资源
+- ❌ 不准用 Canvas/SVG 程序化生成图形当图片
+- ❌ 不准用纯色背景+文字当界面
+- ❌ 不准用占位符图片提交
+
+### 图片引用方式
+```typescript
+// 数据文件中
+{ id: 'rocket', img: `${import.meta.env.BASE_URL}assets/icon.webp` }
+
+// Vue模板中
+<img src="/assets/bg-game.webp" />
+```
+
+---
+
 ## 技术栈
 
 - **引擎**: Phaser 3
@@ -231,6 +315,27 @@ src/games/<game-name>/
 - ✅ 本地存储（进度、最高分）
 - ✅ 响应式布局（手机/平板/电脑）
 
+## ⚠️ 图片路径铁律（违反=游戏白图）
+
+**数据文件（ingredients.ts/customers.ts等）中引用 `public/assets/` 图片时，必须用 `import.meta.env.BASE_URL`，不能用绝对路径！**
+
+CG从子目录加载游戏，`/assets/xxx.webp` 找不到文件→白图。
+
+```typescript
+// ❌ 错误 — CG上图片不显示
+{ id: 'boba', img: '/assets/icon_boba.webp' }
+
+// ✅ 正确 — Vite自动解析为 ./assets/
+{ id: 'boba', img: `${import.meta.env.BASE_URL}assets/icon_boba.webp` }
+```
+
+Vue模板中的 `src="/assets/xxx.webp"` 会被Vite自动转换，不需要改。**只有数据文件中的运行时字符串需要手动修复。**
+
+验证：
+```bash
+grep -rn "'/assets/" src/games/*/data/*.ts  # 输出应为0行
+```
+
 ## 协作规则
 
 - 需要图片素材时 → 输出 `[资源请求]` 告诉Hermes需要什么图片，由Hermes用Gemini生成
@@ -416,3 +521,82 @@ export const sdk = new PlatformSDK()
 1. **CG提交**：`pnpm build:cg --game=<name>` → 上传到 `cg-submit/<name>/`
 2. **Poki提交**：`pnpm build:poki --game=<name>` → 上传到 `poki-submit/<name>/`
 3. 两个平台独立提交，互不影响
+
+## ⚠️ 多语言支持（必须！）
+
+**所有游戏面向海外，默认英文，支持CrazyGames和Poki用户最多的国家语言。**
+
+### 必须支持的语言
+1. **English** (en) - 默认
+2. **Portuguese** (pt) - 巴西（CG/Poki最大市场）
+3. **Spanish** (es) - 拉美+西班牙
+4. **Indonesian** (id) - 东南亚
+5. **Turkish** (tr) - 土耳其
+6. **Russian** (ru) - 俄罗斯
+
+### i18n实现方式
+```typescript
+// src/games/<game>/i18n.ts
+export const translations = {
+  en: {
+    play: 'Play',
+    gameOver: 'Game Over',
+    score: 'Score',
+    // ...
+  },
+  pt: {
+    play: 'Jogar',
+    gameOver: 'Fim de Jogo',
+    score: 'Pontuação',
+    // ...
+  },
+  // ...
+}
+
+// 使用
+const lang = navigator.language.slice(0, 2) || 'en'
+const t = translations[lang] || translations['en']
+```
+
+### 禁止
+- ❌ 只写中文
+- ❌ 只写英文不支持其他语言
+- ❌ 用硬编码字符串
+
+## ⚠️ CrazyGames/Poki品质要求（必须达到！）
+
+**CrazyGames和Poki对游戏品质要求极高，不达标的会被拒绝。**
+
+### CG审核标准（必须全部通过）
+1. **视觉引导** - 新手3秒内知道怎么玩
+2. **美术一致** - 所有素材风格统一
+3. **音效平衡** - 背景音乐+音效，不能太吵
+4. **操作直观** - 触屏友好，响应式
+5. **名称唯一** - 不能和其他游戏重名
+6. **无bug** - 崩溃=直接拒绝
+
+### Poki审核标准
+1. **留存率** - 50%以上用户玩超过3分钟
+2. **加载速度** - 首屏3秒内加载完成
+3. **移动端** - 必须触屏友好
+4. **广告集成** - 必须有 rewarded video
+
+### 测试要求（100%覆盖）
+```bash
+# 必须通过的测试
+pnpm test:unit        # 单元测试100%通过
+pnpm test:integration # 集成测试100%通过
+pnpm test:e2e         # E2E测试100%通过
+
+# Playwright测试（必须在CDP 9223上跑）
+npx playwright test --headed
+```
+
+### 提交前检查清单
+- [ ] 所有测试100%通过
+- [ ] 无console.error/warn
+- [ ] 移动端触屏测试通过
+- [ ] 6种语言翻译完整
+- [ ] 音效正常播放
+- [ ] 本地存储正常
+- [ ] 无白屏/崩溃

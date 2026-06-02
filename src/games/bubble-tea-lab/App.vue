@@ -26,17 +26,29 @@ import {
 import { ACHIEVEMENTS } from './data/customers'
 import { LAB_THEMES } from './data/themes'
 import { canBuyLabTheme, getAvailableLabThemes, equipLabTheme, isDailyRewardAvailable, claimDailyReward, DAILY_REWARD_COINS, checkMetaAchievements, type LabServeStats } from './composables/useMeta'
+import { matchRecipe, recordRecipe, loadRecipeBook } from './data/recipes'
+import { getComboEffect, checkSpecialCombo, getEnhancedComboMultiplier } from './composables/useComboSystem'
 import IngredientShelf from './components/IngredientShelf.vue'
 import CustomerDisplay from './components/CustomerDisplay.vue'
 import GameHud from './components/GameHud.vue'
-import CupVisual from './components/CupVisual.vue'
+import CupVisualEnhanced from './components/CupVisualEnhanced.vue'
+import ParticleEffects from './components/ParticleEffects.vue'
+import RecipeBook from './components/RecipeBook.vue'
+import ShopDecor from './components/ShopDecor.vue'
+import SeasonalEventPanel from './components/SeasonalEventPanel.vue'
 
-type Screen = 'start' | 'game' | 'result' | 'daily' | 'shop' | 'themes'
+type Screen = 'start' | 'game' | 'result' | 'daily' | 'shop' | 'themes' | 'recipe-book' | 'decor' | 'event'
 
 const screen = ref<Screen>('start')
 const state = reactive(createInitialState())
 const adManager = AdManager.getInstance()
 const shopFreeCoinsClaimed = ref(false)
+const showRecipeBook = ref(false)
+const showShopDecor = ref(false)
+const showSeasonalEvent = ref(false)
+const perfectStreak = ref(0)
+const feverTimeActive = ref(false)
+const feverTimeEnd = ref(0)
 
 // Theme & daily persistence
 const STORAGE_THEMES = 'btlab_themes'
@@ -144,11 +156,38 @@ function handleServe() {
     return
   }
 
+  // 检查配方匹配
+  const cupIngredientIds = state.cupContents.map(c => c.id)
+  const matchedRecipe = matchRecipe(cupIngredientIds)
+  if (matchedRecipe) {
+    const book = loadRecipeBook()
+    recordRecipe(matchedRecipe.id, book)
+    addFloatText(state, `📖 新配方解锁: ${matchedRecipe.name}!`, '#FFD700')
+  }
+
   if (result.isPerfect) {
+    perfectStreak.value++
+    
+    // 检查特殊连击
+    const specialCombo = checkSpecialCombo(perfectStreak.value)
+    if (specialCombo) {
+      if (specialCombo.effect === 'fever-time') {
+        feverTimeActive.value = true
+        feverTimeEnd.value = Date.now() + specialCombo.duration * 1000
+        addFloatText(state, '🔥 FEVER TIME! 5秒内得分x2!', '#FF6347')
+        setTimeout(() => { feverTimeActive.value = false }, specialCombo.duration * 1000)
+      } else if (specialCombo.effect === 'boss-rush') {
+        addFloatText(state, '👑 BOSS RUSH! 超级VIP顾客出现!', '#FFD700')
+        // TODO: 触发超级VIP顾客逻辑
+      }
+    }
+    
     audioEngine.play('perfect')
-    addScorePopup(state, `+${result.points} 完美! 🔥 x${state.combo}`, '#ffd700')
-    addFloatText(state, `🔥 x${state.combo} 连击!`, '#ff6b6b')
+    const comboEffect = getComboEffect(state.combo)
+    addScorePopup(state, `+${result.points} 完美! 🔥 x${state.combo} ${comboEffect.name}`, '#ffd700')
+    addFloatText(state, `🔥 x${state.combo} 连击! ${comboEffect.description}`, '#ff6b6b')
   } else {
+    perfectStreak.value = 0
     audioEngine.play('fail')
     if (result.points > 0) {
       addFloatText(state, `+${result.points}`, '#4CAF50')
@@ -273,6 +312,24 @@ function handleClaimDaily() {
   }
 }
 
+function handleBuyDecor(itemId: string, cost: number) {
+  if (state.totalCoins >= cost) {
+    state.totalCoins -= cost
+    state.coins = state.totalCoins
+    audioEngine.play('unlock')
+    addFloatText(state, `🎨 装修已购买!`, '#FFD700')
+  } else {
+    addFloatText(state, '金币不足!', '#ff6b6b')
+  }
+}
+
+function handleClaimEventReward(coins: number) {
+  state.totalCoins += coins
+  state.coins = state.totalCoins
+  audioEngine.play('unlock')
+  addFloatText(state, `🎁 活动奖励 +${coins}💰`, '#FFD700')
+}
+
 // === Ad helpers ===
 
 async function handleMidgameAd() {
@@ -329,8 +386,11 @@ onUnmounted(() => clearTimer(state))
       <div class="btn-group">
         <button class="btn btn-primary" @click="goPlay">开始制作 ✨</button>
         <button class="btn btn-daily" @click="goDaily">每日挑战 🌟</button>
+        <button class="btn btn-event" @click="screen = 'event'">🎉 季节活动</button>
         <button class="btn btn-shop" @click="goShop">解锁商店 🔓</button>
         <button class="btn btn-themes" @click="screen = 'themes'">🎨 主题商店</button>
+        <button class="btn btn-recipe" @click="screen = 'recipe-book'">📖 配方图鉴</button>
+        <button class="btn btn-decor" @click="screen = 'decor'">🏪 店铺装修</button>
       </div>
       <button v-if="!dailyRewardClaimed" class="btn btn-daily-reward" @click="handleClaimDaily">
         🎁 领取每日奖励 +{{ DAILY_REWARD_COINS }}💰
@@ -367,7 +427,7 @@ onUnmounted(() => clearTimer(state))
           :mood="state.customerMood"
           :fulfilled-indices="fulfilledIndices"
         />
-        <CupVisual :contents="state.cupContents" />
+        <CupVisualEnhanced :contents="state.cupContents" />
         <div class="game-actions">
           <button class="btn btn-serve" @click="handleServe">送出饮品 🧋</button>
           <button class="btn btn-reset" @click="handleResetCup">清空重来</button>
@@ -479,6 +539,26 @@ onUnmounted(() => clearTimer(state))
       </div>
     </div>
 
+    <!-- Recipe Book Screen -->
+    <RecipeBook :visible="screen === 'recipe-book'" @close="screen = 'start'" />
+
+    <!-- Shop Decor Screen -->
+    <ShopDecor 
+      :visible="screen === 'decor'" 
+      :coins="state.totalCoins"
+      :level="state.level"
+      @close="screen = 'start'"
+      @buyDecor="handleBuyDecor"
+    />
+
+    <!-- Seasonal Event Panel -->
+    <SeasonalEventPanel
+      :visible="screen === 'event'"
+      :coins="state.totalCoins"
+      @close="screen = 'start'"
+      @claimReward="handleClaimEventReward"
+    />
+
     <!-- Float effects -->
     <div
       v-for="ft in state.floatTexts"
@@ -504,6 +584,9 @@ onUnmounted(() => clearTimer(state))
         <p>食材种类增加了！</p>
       </div>
     </div>
+
+    <!-- Particle Effects -->
+    <ParticleEffects :active="state.combo > 1" :combo="state.combo" />
   </div>
 </template>
 
@@ -658,6 +741,26 @@ html, body { width: 100%; height: 100%; overflow: hidden; font-family: 'PingFang
 .btn-themes {
   background: linear-gradient(135deg, #6c5ce7, #a29bfe); color: #fff;
   font-size: 1em; padding: 12px 32px;
+}
+.btn-recipe {
+  background: linear-gradient(135deg, #f093fb, #f5576c); color: #fff;
+  font-size: 1em; padding: 12px 32px;
+}
+.btn-decor {
+  background: linear-gradient(135deg, #00C9FF, #92FE9D); color: #333;
+  font-size: 1em; padding: 12px 32px;
+  font-weight: 700;
+}
+.btn-event {
+  background: linear-gradient(135deg, #FF6B6B, #4ECDC4); color: #fff;
+  font-size: 1.1em; padding: 14px 32px;
+  font-weight: 700;
+  animation: pulse-event 2s infinite;
+}
+
+@keyframes pulse-event {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
 }
 .btn-daily-reward {
   background: linear-gradient(135deg, #00b894, #00cec9); color: #fff;

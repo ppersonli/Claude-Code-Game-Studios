@@ -1,13 +1,13 @@
 import type { Customer, Achievement, GameState } from '@types'
 
 export const CUSTOMERS: readonly Customer[] = [
-  { name: '小美', img: `${import.meta.env.BASE_URL}assets/customer_girl.webp`, rarity: 'common' },
-  { name: '小明', img: `${import.meta.env.BASE_URL}assets/customer_boy.webp`, rarity: 'common' },
-  { name: '王奶奶', img: `${import.meta.env.BASE_URL}assets/customer_grandma.webp`, rarity: 'common' },
-  { name: '酷哥', img: `${import.meta.env.BASE_URL}assets/customer_cool.webp`, rarity: 'common' },
-  { name: '猫猫酱', img: `${import.meta.env.BASE_URL}assets/customer_catgirl.webp`, rarity: 'rare', tipBonus: 1.5, locked: true, unlockCost: 500 },
-  { name: '机器人', img: `${import.meta.env.BASE_URL}assets/customer_robot.webp`, rarity: 'rare', tipBonus: 1.5, locked: true, unlockCost: 800 },
-  { name: 'VIP大人', img: `${import.meta.env.BASE_URL}assets/customer_vip.webp`, rarity: 'legendary', tipBonus: 2.0, locked: true, unlockCost: 1500 },
+  { name: '小美', img: `${import.meta.env.BASE_URL}assets/customer_girl.webp`, rarity: 'common', personalityId: 'student' },
+  { name: '小明', img: `${import.meta.env.BASE_URL}assets/customer_boy.webp`, rarity: 'common', personalityId: 'office_worker' },
+  { name: '王奶奶', img: `${import.meta.env.BASE_URL}assets/customer_grandma.webp`, rarity: 'common', personalityId: 'grandpa' },
+  { name: '酷哥', img: `${import.meta.env.BASE_URL}assets/customer_cool.webp`, rarity: 'common', personalityId: 'student' },
+  { name: '猫猫酱', img: `${import.meta.env.BASE_URL}assets/customer_catgirl.webp`, rarity: 'rare', tipBonus: 1.5, locked: true, unlockCost: 500, personalityId: 'blogger' },
+  { name: '机器人', img: `${import.meta.env.BASE_URL}assets/customer_robot.webp`, rarity: 'rare', tipBonus: 1.5, locked: true, unlockCost: 800, personalityId: 'demon' },
+  { name: 'VIP大人', img: `${import.meta.env.BASE_URL}assets/customer_vip.webp`, rarity: 'legendary', tipBonus: 2.0, locked: true, unlockCost: 1500, personalityId: 'vip' },
 ] as const
 
 export const ACHIEVEMENTS: readonly Achievement[] = [

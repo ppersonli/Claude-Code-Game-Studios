@@ -1,0 +1,17 @@
+{
+  "mcpServers": {
+    "gemini-image-gen": {
+      "command": "/Users/liyuxuan/miniconda3/bin/python3",
+      "args": ["mcp/gemini-image-gen/server.py"],
+      "env": {
+        "CDP_URL": "http://127.0.0.1:9223",
+        "OUTPUT_DIR": "/Users/liyuxuan/Desktop/cc-games/public/assets",
+        "DEFAULT_TIMEOUT": "90"
+      }
+    },
+    "bg-removal": {
+      "command": "/Users/liyuxuan/miniconda3/bin/python3",
+      "args": ["mcp/bg-removal/server.py"]
+    }
+  }
+}

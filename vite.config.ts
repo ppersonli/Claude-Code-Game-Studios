@@ -44,7 +44,7 @@ function platformSdkPlugin(): Plugin {
 
 export default defineConfig({
   plugins: [vue(), platformSdkPlugin()],
-  base: './',
+  base: '/',
   resolve: {
     alias: {
       '@shared': resolve(__dirname, 'src/shared'),
@@ -56,21 +56,8 @@ export default defineConfig({
     rollupOptions: {
       input: {
         'home': resolve(__dirname, 'src/games/index.html'),
-        'meme-match': resolve(__dirname, 'src/games/meme-match/index.html'),
-        'boba-drop': resolve(__dirname, 'src/games/boba-drop/index.html'),
         'bubble-tea-lab': resolve(__dirname, 'src/games/bubble-tea-lab/index.html'),
-        'color-chaos': resolve(__dirname, 'src/games/color-chaos/index.html'),
-        'idle-coffee-shop': resolve(__dirname, 'src/games/idle-coffee-shop/index.html'),
-        'jelly-pop': resolve(__dirname, 'src/games/jelly-pop/index.html'),
-        'waffle-wobble': resolve(__dirname, 'src/games/waffle-wobble/index.html'),
-        'bubble-shooter': resolve(__dirname, 'src/games/bubble-shooter/index.html'),
-        'boba-tycoon': resolve(__dirname, 'src/games/boba-tycoon/index.html'),
-        'boba-runner': resolve(__dirname, 'src/games/boba-runner/index.html'),
-        'boba-clicker': resolve(__dirname, 'src/games/boba-clicker/index.html'),
-        'boba-tower-defense': resolve(__dirname, 'src/games/boba-tower-defense/index.html'),
-        'mochi-merge': resolve(__dirname, 'src/games/mochi-merge/index.html'),
-        'number-merge-2048': resolve(__dirname, 'src/games/number-merge-2048/index.html'),
-        'block-blast-kawaii': resolve(__dirname, 'src/games/block-blast-kawaii/index.html'),
+        'orbit-odyssey': resolve(__dirname, 'src/games/orbit-odyssey/index.html'),
       },
     },
   },
