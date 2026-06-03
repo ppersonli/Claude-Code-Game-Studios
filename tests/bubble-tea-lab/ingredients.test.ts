@@ -2,8 +2,8 @@ import { describe, it, expect } from 'vitest'
 import { INGREDIENTS, isIngredientUnlocked } from '../../src/games/bubble-tea-lab/data/ingredients'
 
 describe('INGREDIENTS data', () => {
-  it('has 16 ingredients total', () => {
-    expect(INGREDIENTS).toHaveLength(16)
+  it('has 23 ingredients total', () => {
+    expect(INGREDIENTS).toHaveLength(23)
   })
 
   it('has unique ids for all ingredients', () => {
@@ -32,24 +32,24 @@ describe('INGREDIENTS data', () => {
     expect(INGREDIENTS.filter(i => i.type === 'tea')).toHaveLength(2)
   })
 
-  it('has 3 liquids (including locked cream)', () => {
-    expect(INGREDIENTS.filter(i => i.type === 'liquid')).toHaveLength(3)
+  it('has 4 liquids (including locked cream and seasonal)', () => {
+    expect(INGREDIENTS.filter(i => i.type === 'liquid')).toHaveLength(4)
   })
 
-  it('has 8 toppings', () => {
-    expect(INGREDIENTS.filter(i => i.type === 'topping')).toHaveLength(8)
+  it('has 13 toppings', () => {
+    expect(INGREDIENTS.filter(i => i.type === 'topping')).toHaveLength(13)
   })
 
   it('has 2 fruits', () => {
     expect(INGREDIENTS.filter(i => i.type === 'fruit')).toHaveLength(2)
   })
 
-  it('has 1 extra', () => {
-    expect(INGREDIENTS.filter(i => i.type === 'extra')).toHaveLength(1)
+  it('has 2 extras', () => {
+    expect(INGREDIENTS.filter(i => i.type === 'extra')).toHaveLength(2)
   })
 
-  it('has 5 locked ingredients', () => {
-    expect(INGREDIENTS.filter(i => i.locked)).toHaveLength(5)
+  it('has 12 locked ingredients', () => {
+    expect(INGREDIENTS.filter(i => i.locked)).toHaveLength(12)
   })
 
   it('has 11 unlocked ingredients by default', () => {
