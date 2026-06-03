@@ -44,7 +44,7 @@ function platformSdkPlugin(): Plugin {
 
 export default defineConfig({
   plugins: [vue(), platformSdkPlugin()],
-  base: '/',
+  base: './',
   resolve: {
     alias: {
       '@shared': resolve(__dirname, 'src/shared'),
@@ -58,6 +58,9 @@ export default defineConfig({
         'home': resolve(__dirname, 'src/games/index.html'),
         'bubble-tea-lab': resolve(__dirname, 'src/games/bubble-tea-lab/index.html'),
         'orbit-odyssey': resolve(__dirname, 'src/games/orbit-odyssey/index.html'),
+        'space-factory-idle': resolve(__dirname, 'src/games/space-factory-idle/index.html'),
+        'dungeon-defense-idle': resolve(__dirname, 'src/games/dungeon-defense-idle/index.html'),
+        'space-farm-idle': resolve(__dirname, 'src/games/space-farm-idle/index.html'),
       },
     },
   },
