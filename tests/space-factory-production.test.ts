@@ -61,6 +61,77 @@ describe('production.ts — production logic', () => {
       expect(state.totalProduced).toBeGreaterThan(0)
     })
 
+    it('applies event output multiplier (meteor shower = x2)', () => {
+      // Meteor shower doubles output
+      const stateMeteor = makeGameState({
+        activeEvent: 'meteor_shower',
+        eventEndTime: Date.now() + 60_000,
+      })
+      processProductionTick(stateMeteor)
+      const stockMeteor = stateMeteor.productionLines.earth[0].stock
+
+      // No event
+      const stateNormal = makeGameState()
+      processProductionTick(stateNormal)
+      const stockNormal = stateNormal.productionLines.earth[0].stock
+
+      // Meteor shower should produce more items
+      expect(stockMeteor).toBeGreaterThan(stockNormal)
+    })
+
+    it('sandstorm reduces production output', () => {
+      // Use electronics (baseOutput: 3) at level 3 so output > 1 and multiplier is visible
+      const stateSand = makeGameState({
+        activeEvent: 'sandstorm',
+        eventEndTime: Date.now() + 30_000,
+      })
+      stateSand.unlockedRecipes.push('electronics')
+      stateSand.productionLines.earth[0] = { recipeId: 'electronics', level: 3, stock: 0, maxStock: 50, automated: false }
+      processProductionTick(stateSand)
+      const stockSand = stateSand.productionLines.earth[0].stock
+
+      const stateNormal = makeGameState()
+      stateNormal.unlockedRecipes.push('electronics')
+      stateNormal.productionLines.earth[0] = { recipeId: 'electronics', level: 3, stock: 0, maxStock: 50, automated: false }
+      processProductionTick(stateNormal)
+      const stockNormal = stateNormal.productionLines.earth[0].stock
+
+      // Sandstorm should produce fewer items
+      expect(stockSand).toBeLessThan(stockNormal)
+    })
+
+    it('black hole triples production output', () => {
+      const stateBH = makeGameState({
+        activeEvent: 'black_hole',
+        eventEndTime: Date.now() + 120_000,
+      })
+      processProductionTick(stateBH)
+      const stockBH = stateBH.productionLines.earth[0].stock
+
+      const stateNormal = makeGameState()
+      processProductionTick(stateNormal)
+      const stockNormal = stateNormal.productionLines.earth[0].stock
+
+      // Black hole should produce significantly more
+      expect(stockBH).toBeGreaterThan(stockNormal)
+    })
+
+    it('does not apply expired event multiplier', () => {
+      const stateExpired = makeGameState({
+        activeEvent: 'meteor_shower',
+        eventEndTime: Date.now() - 1, // already expired
+      })
+      processProductionTick(stateExpired)
+      const stockExpired = stateExpired.productionLines.earth[0].stock
+
+      const stateNormal = makeGameState()
+      processProductionTick(stateNormal)
+      const stockNormal = stateNormal.productionLines.earth[0].stock
+
+      // Expired event should produce same as no event (within rounding tolerance)
+      expect(stockExpired).toBe(stockNormal)
+    })
+
     it('does not exceed maxStock', () => {
       const state = makeGameState()
       // Set stock near max

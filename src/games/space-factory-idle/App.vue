@@ -14,7 +14,7 @@ import { RECIPES, getRecipesForPlanet } from './data/recipes'
 import { UPGRADES, getUpgradesByCategory } from './data/upgrades'
 import { EMPLOYEES } from './data/employees'
 import { ACHIEVEMENTS, type AchievementCheckState } from './data/achievements'
-import { getTodayChallenge, isDailyCompletedToday, completeDailyChallenge, type DailyChallenge, type DailyChallengeContext } from './data/daily-challenges'
+import { getTodayChallenge, isDailyCompletedToday, completeDailyChallenge, getDailyChallengeProgress, type DailyChallenge, type DailyChallengeContext, type DailyChallengeProgress } from './data/daily-challenges'
 import { translations, getLocale, type Locale } from './i18n/translations'
 import { GameScene } from './phaser/scenes/GameScene'
 import type { GameSceneData } from './phaser/scenes/GameScene'
@@ -40,6 +40,20 @@ const showTutorial = ref(state.totalProduced === 0)
 
 // Daily challenge
 const todayChallenge = ref<DailyChallenge>(getTodayChallenge())
+const dailyChallengeCtx = computed<DailyChallengeContext>(() => ({
+  totalCoinsEarned: state.sessionCoinsEarned,
+  itemsProduced: state.sessionItemsProduced,
+  upgradesMade: state.sessionUpgradesMade,
+  activeTime: (Date.now() - state.sessionStart) / 1000,
+  prestigeDone: false,
+}))
+const dailyProgress = computed<DailyChallengeProgress>(() =>
+  getDailyChallengeProgress(todayChallenge.value, dailyChallengeCtx.value),
+)
+
+// Achievement notification (rich toast with icon)
+const achievementNotify = ref<{ name: string; description: string; reward: string; icon: string } | null>(null)
+let achievementNotifyTimer: ReturnType<typeof setTimeout> | null = null
 
 // Combo system
 const comboCount = ref(0)
@@ -380,9 +394,16 @@ function checkAchievements() {
   for (const ach of ACHIEVEMENTS) {
     if (!state.achievements.includes(ach.id) && ach.check(checkState)) {
       state.achievements.push(ach.id)
-      achievementToast.value = ach.name
+      // Rich notification with icon and details
+      achievementNotify.value = {
+        name: ach.name,
+        description: ach.description,
+        reward: ach.reward,
+        icon: ach.icon,
+      }
       audioEngine.play('unlock')
-      setTimeout(() => { achievementToast.value = '' }, 3000)
+      if (achievementNotifyTimer) clearTimeout(achievementNotifyTimer)
+      achievementNotifyTimer = setTimeout(() => { achievementNotify.value = null }, 4000)
     }
   }
 }
@@ -777,11 +798,18 @@ onUnmounted(() => {
           <span v-if="isDailyCompletedToday(state.lastDailyCompleted)" class="daily-done">{{ t('completedToday') }}</span>
           <button class="btn-icon" @click="goBack">✕</button>
         </div>
-        <div class="daily-card">
+        <div class="daily-card" :class="{ 'daily-complete': isDailyCompletedToday(state.lastDailyCompleted) }">
           <img :src="todayChallenge.icon" class="dc-icon" />
           <div class="dc-name">{{ todayChallenge.name }}</div>
           <div class="dc-desc">{{ todayChallenge.description }}</div>
           <div class="dc-bonus">{{ t('bonus') }}: ×{{ todayChallenge.bonusMultiplier }}</div>
+          <!-- Progress bar -->
+          <div class="dc-progress" v-if="!isDailyCompletedToday(state.lastDailyCompleted)">
+            <div class="dc-progress-bar">
+              <div class="dc-progress-fill" :style="{ width: (dailyProgress.percent * 100) + '%' }"></div>
+            </div>
+            <div class="dc-progress-label">{{ dailyProgress.label }}</div>
+          </div>
           <div class="dc-streak" v-if="state.dailyStreak > 0">🔥 {{ t('streak') }}: {{ state.dailyStreak }} days</div>
         </div>
         <button v-if="!isDailyCompletedToday(state.lastDailyCompleted)" class="btn btn-primary"
@@ -796,8 +824,21 @@ onUnmounted(() => {
     <!-- Event Toast -->
     <div v-if="eventToast" class="toast event-toast">{{ eventToast }}</div>
 
-    <!-- Achievement Toast -->
+    <!-- Achievement Toast (for prestige/daily messages) -->
     <div v-if="achievementToast" class="toast achievement-toast">🏅 {{ achievementToast }}</div>
+
+    <!-- Achievement Earned Notification (rich, with icon) -->
+    <Transition name="ach-notify">
+      <div v-if="achievementNotify" class="achievement-earned" data-testid="achievement-notify">
+        <img :src="achievementNotify.icon" class="ae-icon" />
+        <div class="ae-info">
+          <div class="ae-label">{{ t('achievementEarned') }}</div>
+          <div class="ae-name">{{ achievementNotify.name }}</div>
+          <div class="ae-desc">{{ achievementNotify.description }}</div>
+          <div class="ae-reward">🎁 {{ achievementNotify.reward }}</div>
+        </div>
+      </div>
+    </Transition>
 
     <!-- Combo Display -->
     <div v-if="showCombo && comboCount >= 3" class="combo-display" :key="comboCount">
@@ -1124,17 +1165,35 @@ onUnmounted(() => {
 
 .daily-done { color: #00e676; font-size: 13px; font-weight: 600; }
 .daily-card { background: rgba(255,255,255,0.05); border: 1px solid rgba(0,229,255,0.3); border-radius: 12px; padding: 24px; text-align: center; margin-bottom: 16px; }
+.daily-card.daily-complete { border-color: rgba(0,230,118,0.4); background: rgba(0,230,118,0.06); }
 .dc-icon { width: 72px; height: 72px; object-fit: contain; margin-bottom: 8px; border-radius: 12px; }
 .dc-name { font-family: 'Orbitron', sans-serif; font-size: 18px; color: #00e5ff; margin-bottom: 8px; }
 .dc-desc { color: rgba(255,255,255,0.8); margin-bottom: 8px; }
 .dc-bonus { color: #ffd740; font-weight: 600; margin-bottom: 8px; }
-.dc-streak { color: #ff6d00; font-weight: 600; }
+.dc-streak { color: #ff6d00; font-weight: 600; margin-top: 8px; }
+.dc-progress { margin: 12px 0 4px; }
+.dc-progress-bar { height: 8px; background: rgba(255,255,255,0.1); border-radius: 4px; overflow: hidden; margin-bottom: 6px; }
+.dc-progress-fill { height: 100%; background: linear-gradient(90deg, #00e5ff, #aa00ff); border-radius: 4px; transition: width 0.5s ease; }
+.dc-progress-label { font-size: 13px; color: rgba(255,255,255,0.7); font-family: 'Orbitron', sans-serif; }
 
 /* ============ TOASTS ============ */
 .toast { position: fixed; top: 15%; left: 50%; transform: translateX(-50%); padding: 14px 28px; border-radius: 12px; font-family: 'Orbitron', sans-serif; font-size: 15px; font-weight: 700; z-index: 100; animation: toast-pop 0.4s ease-out; white-space: nowrap; }
 .event-toast { background: linear-gradient(135deg, #ff4081, #ff6d00); color: white; }
 .achievement-toast { background: linear-gradient(135deg, #00e5ff, #aa00ff); color: white; }
 @keyframes toast-pop { 0% { transform: translateX(-50%) scale(0); opacity: 0; } 60% { transform: translateX(-50%) scale(1.15); } 100% { transform: translateX(-50%) scale(1); opacity: 1; } }
+
+/* ============ ACHIEVEMENT EARNED NOTIFICATION ============ */
+.achievement-earned { position: fixed; top: 8%; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 14px; padding: 16px 24px; background: linear-gradient(135deg, rgba(0,229,255,0.15), rgba(170,0,255,0.15)); border: 2px solid rgba(0,229,255,0.5); border-radius: 16px; backdrop-filter: blur(12px); z-index: 101; box-shadow: 0 8px 32px rgba(0,229,255,0.25), 0 0 60px rgba(170,0,255,0.15); max-width: 340px; width: 90%; }
+.ae-icon { width: 56px; height: 56px; object-fit: contain; border-radius: 10px; border: 2px solid rgba(0,229,255,0.4); flex-shrink: 0; }
+.ae-info { flex: 1; min-width: 0; }
+.ae-label { font-size: 10px; text-transform: uppercase; letter-spacing: 2px; color: #ffd740; margin-bottom: 2px; }
+.ae-name { font-family: 'Orbitron', sans-serif; font-size: 16px; color: #00e5ff; font-weight: 700; margin-bottom: 2px; }
+.ae-desc { font-size: 12px; color: rgba(255,255,255,0.7); margin-bottom: 4px; }
+.ae-reward { font-size: 12px; color: #ffd740; font-weight: 600; }
+.ach-notify-enter-active { animation: ach-slide-in 0.5s cubic-bezier(0.34, 1.56, 0.64, 1); }
+.ach-notify-leave-active { animation: ach-slide-out 0.4s ease-in forwards; }
+@keyframes ach-slide-in { 0% { transform: translateX(-50%) translateY(-40px) scale(0.8); opacity: 0; } 100% { transform: translateX(-50%) translateY(0) scale(1); opacity: 1; } }
+@keyframes ach-slide-out { 0% { transform: translateX(-50%) translateY(0) scale(1); opacity: 1; } 100% { transform: translateX(-50%) translateY(-40px) scale(0.8); opacity: 0; } }
 
 /* ============ POPUP ============ */
 .popup-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.7); z-index: 30; display: flex; align-items: center; justify-content: center; }

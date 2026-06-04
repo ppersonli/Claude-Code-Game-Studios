@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { getTodayDate, getTodayChallenge, isDailyCompletedToday } from '../../src/games/space-factory-idle/data/daily-challenges'
+import { getTodayDate, getTodayChallenge, isDailyCompletedToday, getDailyChallengeProgress, type DailyChallenge, type DailyChallengeContext } from '../../src/games/space-factory-idle/data/daily-challenges'
 
 describe('Daily Challenges', () => {
   describe('getTodayDate', () => {
@@ -68,6 +68,114 @@ describe('Daily Challenges', () => {
     })
     it('returns false for future date', () => {
       expect(isDailyCompletedToday('2099-01-01')).toBe(false)
+    })
+  })
+
+  describe('getTodayChallenge goal', () => {
+    it('every challenge has a goal with type and target', () => {
+      const challenge = getTodayChallenge()
+      expect(challenge.goal).toBeDefined()
+      expect(challenge.goal.type).toBeTruthy()
+      expect(challenge.goal.target).toBeGreaterThan(0)
+    })
+  })
+
+  describe('getDailyChallengeProgress', () => {
+    const makeChallenge = (goal: DailyChallenge['goal']): DailyChallenge => ({
+      id: 'test',
+      name: 'Test',
+      description: 'Test',
+      icon: '',
+      bonusMultiplier: 2,
+      validate: () => false,
+      goal,
+    })
+
+    const emptyCtx: DailyChallengeContext = {
+      totalCoinsEarned: 0,
+      itemsProduced: 0,
+      upgradesMade: 0,
+      activeTime: 0,
+      prestigeDone: false,
+    }
+
+    it('returns 0% when no progress made', () => {
+      const challenge = makeChallenge({ type: 'items', target: 100 })
+      const progress = getDailyChallengeProgress(challenge, emptyCtx)
+      expect(progress.current).toBe(0)
+      expect(progress.target).toBe(100)
+      expect(progress.percent).toBe(0)
+      expect(progress.completed).toBe(false)
+    })
+
+    it('tracks items produced correctly', () => {
+      const challenge = makeChallenge({ type: 'items', target: 100 })
+      const ctx: DailyChallengeContext = { ...emptyCtx, itemsProduced: 47 }
+      const progress = getDailyChallengeProgress(challenge, ctx)
+      expect(progress.current).toBe(47)
+      expect(progress.target).toBe(100)
+      expect(progress.percent).toBeCloseTo(0.47)
+      expect(progress.label).toBe('47 / 100')
+      expect(progress.completed).toBe(false)
+    })
+
+    it('tracks upgrades made correctly', () => {
+      const challenge = makeChallenge({ type: 'upgrades', target: 10 })
+      const ctx: DailyChallengeContext = { ...emptyCtx, upgradesMade: 5 }
+      const progress = getDailyChallengeProgress(challenge, ctx)
+      expect(progress.current).toBe(5)
+      expect(progress.percent).toBe(0.5)
+      expect(progress.completed).toBe(false)
+    })
+
+    it('tracks coins earned correctly', () => {
+      const challenge = makeChallenge({ type: 'coins', target: 50000 })
+      const ctx: DailyChallengeContext = { ...emptyCtx, totalCoinsEarned: 25000 }
+      const progress = getDailyChallengeProgress(challenge, ctx)
+      expect(progress.current).toBe(25000)
+      expect(progress.percent).toBe(0.5)
+    })
+
+    it('tracks coinsTime correctly', () => {
+      const challenge = makeChallenge({ type: 'coinsTime', target: 10000 })
+      const ctx: DailyChallengeContext = { ...emptyCtx, totalCoinsEarned: 8000 }
+      const progress = getDailyChallengeProgress(challenge, ctx)
+      expect(progress.current).toBe(8000)
+      expect(progress.label).toBe('8000 / 10000')
+    })
+
+    it('tracks prestige correctly (not done)', () => {
+      const challenge = makeChallenge({ type: 'prestige', target: 1 })
+      const progress = getDailyChallengeProgress(challenge, emptyCtx)
+      expect(progress.current).toBe(0)
+      expect(progress.completed).toBe(false)
+    })
+
+    it('tracks prestige correctly (done)', () => {
+      const challenge = makeChallenge({ type: 'prestige', target: 1 })
+      const ctx: DailyChallengeContext = { ...emptyCtx, prestigeDone: true }
+      const progress = getDailyChallengeProgress(challenge, ctx)
+      expect(progress.current).toBe(1)
+      expect(progress.percent).toBe(1)
+      expect(progress.completed).toBe(true)
+    })
+
+    it('clamps current at target (no overshoot)', () => {
+      const challenge = makeChallenge({ type: 'items', target: 100 })
+      const ctx: DailyChallengeContext = { ...emptyCtx, itemsProduced: 250 }
+      const progress = getDailyChallengeProgress(challenge, ctx)
+      expect(progress.current).toBe(100)
+      expect(progress.percent).toBe(1)
+      expect(progress.label).toBe('100 / 100')
+      expect(progress.completed).toBe(true)
+    })
+
+    it('marks as completed when target is met exactly', () => {
+      const challenge = makeChallenge({ type: 'upgrades', target: 10 })
+      const ctx: DailyChallengeContext = { ...emptyCtx, upgradesMade: 10 }
+      const progress = getDailyChallengeProgress(challenge, ctx)
+      expect(progress.completed).toBe(true)
+      expect(progress.percent).toBe(1)
     })
   })
 })
