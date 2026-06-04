@@ -38,6 +38,17 @@ const achievementToast = ref('')
 const eventToast = ref('')
 const showTutorial = ref(state.totalProduced === 0)
 
+// Audio mute toggle
+const isMuted = ref(false)
+function toggleMute() {
+  isMuted.value = !isMuted.value
+  if (isMuted.value) {
+    audioEngine.mute()
+  } else {
+    audioEngine.unmute()
+  }
+}
+
 // Daily challenge
 const todayChallenge = ref<DailyChallenge>(getTodayChallenge())
 const dailyChallengeCtx = computed<DailyChallengeContext>(() => ({
@@ -174,6 +185,7 @@ function startGame() {
   screen.value = 'game'
   adManager.gameplayStart()
   audioEngine.init()
+  audioEngine.startBGM()
 
   // Check offline earnings
   const offline = calculateOfflineEarnings(state)
@@ -417,6 +429,7 @@ function goToMenu() {
   screen.value = 'menu'
   adManager.gameplayStop()
   stopProductionLoop()
+  audioEngine.stopBGM()
   destroyPhaser()
   saveState(state)
 }
@@ -498,6 +511,7 @@ onMounted(() => {
 
 onUnmounted(() => {
   stopProductionLoop()
+  audioEngine.stopBGM()
   destroyPhaser()
   if (autoSaveTimer) clearInterval(autoSaveTimer)
   saveState(state)
@@ -568,6 +582,10 @@ onUnmounted(() => {
             </div>
           </div>
           <div class="hud-right">
+            <button class="btn-mute" :class="{ muted: isMuted }" @click="toggleMute"
+                    :title="isMuted ? t('unmute') : t('mute')" data-testid="mute-btn">
+              {{ isMuted ? '🔇' : '🔊' }}
+            </button>
             <button class="btn-boost" :class="{ active: speedBoostActive }" @click="watchAdForSpeedBoost"
                     :title="speedBoostActive ? '2x Speed Active!' : 'Watch Ad for 2x Speed'">
               {{ speedBoostActive ? '⚡2x' : '⚡' }}
@@ -1029,6 +1047,15 @@ onUnmounted(() => {
   box-shadow: 0 0 12px rgba(255,215,64,0.4);
 }
 @keyframes boost-pulse { 0%, 100% { box-shadow: 0 0 8px rgba(255,215,64,0.3); } 50% { box-shadow: 0 0 20px rgba(255,215,64,0.6); } }
+
+.btn-mute {
+  background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15);
+  color: #00e5ff; font-size: 18px; padding: 6px 10px; cursor: pointer;
+  border-radius: var(--radius-sm); transition: all var(--transition-normal);
+  min-width: 44px; min-height: 44px; display: flex; align-items: center; justify-content: center;
+}
+.btn-mute:hover { background: rgba(0,229,255,0.15); transform: scale(1.05); }
+.btn-mute.muted { color: rgba(255,255,255,0.3); border-color: rgba(255,255,255,0.1); }
 
 /* ============ TUTORIAL HINT ============ */
 .tutorial-hint {

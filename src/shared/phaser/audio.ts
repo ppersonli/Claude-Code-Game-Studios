@@ -5,6 +5,13 @@ class AudioEngineClass {
   private _muted = false
   private _resumeListenerAdded = false
 
+  // BGM state
+  private bgmOscillators: OscillatorNode[] = []
+  private bgmGains: GainNode[] = []
+  private bgmMasterGain: GainNode | null = null
+  private bgmLfo: OscillatorNode | null = null
+  private bgmPlaying = false
+
   init(): void {
     if (!this.ctx) {
       this.ctx = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)()
@@ -34,14 +41,99 @@ class AudioEngineClass {
 
   set muted(value: boolean) {
     this._muted = value
+    if (this.bgmMasterGain) {
+      this.bgmMasterGain.gain.linearRampToValueAtTime(
+        value ? 0 : 0.04,
+        (this.ctx?.currentTime ?? 0) + 0.3,
+      )
+    }
   }
 
   mute(): void {
-    this._muted = true
+    this.muted = true
   }
 
   unmute(): void {
-    this._muted = false
+    this.muted = false
+  }
+
+  /** Start looping ambient BGM. Safe to call multiple times. */
+  startBGM(): void {
+    if (this.bgmPlaying) return
+    this.init()
+    const ctx = this.ctx!
+    this.bgmPlaying = true
+
+    // Master gain for all BGM layers
+    this.bgmMasterGain = ctx.createGain()
+    this.bgmMasterGain.gain.value = this._muted ? 0 : 0.04
+    this.bgmMasterGain.connect(ctx.destination)
+
+    // Layer definitions: frequency, type, individual gain
+    const layers: Array<{ freq: number; type: OscillatorType; gain: number }> = [
+      { freq: 55,   type: 'sine',     gain: 0.6 },  // deep sub drone
+      { freq: 110,  type: 'sine',     gain: 0.35 }, // low pad
+      { freq: 165,  type: 'triangle', gain: 0.2 },  // fifth overtone
+      { freq: 220,  type: 'sine',     gain: 0.15 }, // mid warmth
+      { freq: 330,  type: 'sine',     gain: 0.08 }, // high shimmer
+    ]
+
+    for (const layer of layers) {
+      const osc = ctx.createOscillator()
+      const gain = ctx.createGain()
+      osc.type = layer.type
+      osc.frequency.value = layer.freq
+      gain.gain.value = layer.gain
+
+      osc.connect(gain)
+      gain.connect(this.bgmMasterGain)
+      osc.start()
+
+      this.bgmOscillators.push(osc)
+      this.bgmGains.push(gain)
+    }
+
+    // Slow LFO modulating the mid layer's frequency for movement
+    this.bgmLfo = ctx.createOscillator()
+    const lfoGain = ctx.createGain()
+    this.bgmLfo.type = 'sine'
+    this.bgmLfo.frequency.value = 0.08 // ~12 second cycle
+    lfoGain.gain.value = 4 // +/- 4 Hz modulation
+    this.bgmLfo.connect(lfoGain)
+    if (this.bgmGains[2]) {
+      lfoGain.connect(this.bgmGains[2].gain)
+    }
+    this.bgmLfo.start()
+  }
+
+  /** Stop BGM with a smooth fade out. */
+  stopBGM(): void {
+    if (!this.bgmPlaying || !this.ctx) return
+    const ctx = this.ctx
+    const now = ctx.currentTime
+
+    // Fade out master gain
+    if (this.bgmMasterGain) {
+      this.bgmMasterGain.gain.linearRampToValueAtTime(0, now + 1.0)
+    }
+
+    // Stop oscillators after fade
+    const oscs = [...this.bgmOscillators]
+    const lfo = this.bgmLfo
+    setTimeout(() => {
+      for (const o of oscs) { try { o.stop() } catch { /* already stopped */ } }
+      if (lfo) try { lfo.stop() } catch { /* already stopped */ }
+    }, 1200)
+
+    this.bgmOscillators = []
+    this.bgmGains = []
+    this.bgmMasterGain = null
+    this.bgmLfo = null
+    this.bgmPlaying = false
+  }
+
+  get bgmActive(): boolean {
+    return this.bgmPlaying
   }
 
   play(type: SoundType): void {

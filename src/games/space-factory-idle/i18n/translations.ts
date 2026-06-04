@@ -79,6 +79,8 @@ export const translations: Record<Locale, Record<string, string>> = {
     totalCoins: 'Total Coins',
     clickToProduce: 'Click to produce!',
     tutorial: 'Tap PRODUCE to make items, then SELL for coins!',
+    mute: 'Mute',
+    unmute: 'Unmute',
   },
   pt: {
     title: 'FÁBRICA ESPACIAL',
@@ -143,6 +145,8 @@ export const translations: Record<Locale, Record<string, string>> = {
     totalCoins: 'Total de Moedas',
     clickToProduce: 'Clique para produzir!',
     tutorial: 'Toque PRODUZIR para fazer itens, depois VENDER por moedas!',
+    mute: 'Silenciar',
+    unmute: 'Ativar Som',
   },
   es: {
     title: 'FÁBRICA ESPACIAL',
@@ -207,6 +211,8 @@ export const translations: Record<Locale, Record<string, string>> = {
     totalCoins: 'Total de Monedas',
     clickToProduce: '¡Haz clic para producir!',
     tutorial: '¡Toca PRODUCIR para hacer artículos, luego VENDER por monedas!',
+    mute: 'Silenciar',
+    unmute: 'Activar Sonido',
   },
   id: {
     title: 'PABRIK LUAR ANGKASA',
@@ -271,6 +277,8 @@ export const translations: Record<Locale, Record<string, string>> = {
     totalCoins: 'Total Koin',
     clickToProduce: 'Klik untuk memproduksi!',
     tutorial: 'Ketuk PRODUKSI untuk membuat barang, lalu JUAL untuk koin!',
+    mute: 'Bisukan',
+    unmute: 'Nyalakan Suara',
   },
   tr: {
     title: 'UZAY FABRİKASI',
@@ -335,6 +343,8 @@ export const translations: Record<Locale, Record<string, string>> = {
     totalCoins: 'Toplam Altın',
     clickToProduce: 'Üretmek için tıkla!',
     tutorial: 'Öğe yapmak için ÜRET\'e, sonra altın için SAT\'a dokun!',
+    mute: 'Sessiz',
+    unmute: 'Sesi Aç',
   },
   ru: {
     title: 'КОСМИЧЕСКАЯ ФАБРИКА',
@@ -399,6 +409,8 @@ export const translations: Record<Locale, Record<string, string>> = {
     totalCoins: 'Всего Монет',
     clickToProduce: 'Нажмите для производства!',
     tutorial: 'Нажмите ПРОИЗВЕСТИ для создания, затем ПРОДАТЬ за монеты!',
+    mute: 'Выключить звук',
+    unmute: 'Включить звук',
   },
 }
 
