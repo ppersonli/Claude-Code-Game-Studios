@@ -41,6 +41,14 @@ export default {
     common: 'Gewöhnlich',
     rare: 'Selten',
     legendary: 'Legendär',
+    wants: 'Will',
+    office_worker: '🧑‍💼 In Eile',
+    student: '👧 Naschkatze',
+    grandpa: '👴 Gesundheitsbewusst',
+    blogger: '🤳 Ästhet',
+    demon: '😈 Unberechenbar',
+    vip_label: '🌈 VIP',
+    mystery: '🎁 Geheimnis',
   },
   
   ingredients: {
@@ -237,6 +245,7 @@ export default {
     timeLeft: 'Zeit',
     levelUp: '⬆️ Level {level}!',
     newIngredients: 'Neue Zutaten freigeschaltet!',
+    shelfLabel: 'Zutatenregal',
   },
   
   result: {

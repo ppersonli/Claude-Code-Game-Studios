@@ -1,6 +1,20 @@
 <script setup lang="ts">
 import type { Customer, Ingredient } from '@types'
 import { ref, watch, onUnmounted } from 'vue'
+import { t } from '../i18n'
+
+function getPersonalityLabel(personality: string): string {
+  const labels: Record<string, string> = {
+    office_worker: t('customers.office_worker'),
+    student: t('customers.student'),
+    grandpa: t('customers.grandpa'),
+    blogger: t('customers.blogger'),
+    demon: t('customers.demon'),
+    vip: t('customers.vip_label'),
+    mystery: t('customers.mystery'),
+  }
+  return labels[personality] || personality
+}
 
 const props = defineProps<{
   customer: Customer | null
@@ -116,7 +130,7 @@ onUnmounted(() => {
 
       <!-- 订单气泡 -->
       <div class="order-bubble">
-        <span class="order-label">想要...</span>
+        <span class="order-label">{{ t('customers.wants') }}...</span>
         <div class="order-items">
           <img
             v-for="(ing, i) in order"
@@ -141,21 +155,6 @@ onUnmounted(() => {
     </div>
   </div>
 </template>
-
-<script lang="ts">
-function getPersonalityLabel(personality: string): string {
-  const labels: Record<string, string> = {
-    office_worker: '🧑‍💼 急匆匆',
-    student: '👧 甜蜜控',
-    grandpa: '👴 养生派',
-    blogger: '🤳 颜值党',
-    demon: '😈 变化多',
-    vip: '🌈 VIP',
-    mystery: '🎁 神秘',
-  }
-  return labels[personality] || personality
-}
-</script>
 
 <style scoped>
 .customer-display-enhanced {

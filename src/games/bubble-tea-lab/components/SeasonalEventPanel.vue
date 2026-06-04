@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
+import { t } from '../i18n'
 import {
   getActiveEvents,
   loadEventProgress,
@@ -92,15 +93,15 @@ function getDaysRemaining(event: SeasonalEvent): number {
   <div v-if="visible" class="seasonal-overlay" @click="emit('close')">
     <div class="seasonal-panel" @click.stop>
       <div class="panel-header">
-        <h2>🎉 季节活动</h2>
+        <h2>🎉 {{ t('events.title') }}</h2>
         <button class="btn-close" @click="emit('close')">✕</button>
       </div>
 
       <!-- 无活动提示 -->
       <div v-if="activeEvents.length === 0" class="no-event">
         <div class="no-event-icon">📅</div>
-        <p>当前没有活动</p>
-        <p class="no-event-hint">敬请期待下一个节日活动！</p>
+        <p>{{ t('events.noEvent') }}</p>
+        <p class="no-event-hint">{{ t('events.noEventHint') }}</p>
       </div>
 
       <!-- 活动列表 -->
@@ -114,7 +115,7 @@ function getDaysRemaining(event: SeasonalEvent): number {
             :class="{ active: selectedEvent?.id === event.id }"
             @click="selectedEvent = event"
           >
-            {{ event.emoji }} {{ event.name }}
+            {{ event.emoji }} {{ t('events.' + event.id) || event.name }}
           </button>
         </div>
 
@@ -125,34 +126,34 @@ function getDaysRemaining(event: SeasonalEvent): number {
             <div class="event-title">
               <span class="event-emoji">{{ selectedEvent.emoji }}</span>
               <div>
-                <h3>{{ selectedEvent.name }}</h3>
-                <p class="event-desc">{{ selectedEvent.description }}</p>
+                <h3>{{ t('events.' + selectedEvent.id) || selectedEvent.name }}</h3>
+                <p class="event-desc">{{ t('events.desc.' + selectedEvent.id) || selectedEvent.description }}</p>
               </div>
             </div>
             <div class="event-timer">
-              <span class="timer-label">剩余时间</span>
-              <span class="timer-value">{{ getDaysRemaining(selectedEvent) }} 天</span>
+              <span class="timer-label">{{ t('events.timeLeft') }}</span>
+              <span class="timer-value">{{ t('events.days', { count: getDaysRemaining(selectedEvent) }) }}</span>
             </div>
           </div>
 
           <!-- 限定内容 -->
           <div class="event-section">
-            <h4>🎁 限定内容</h4>
+            <h4>{{ t('events.limitedContent') }}</h4>
             <div class="limited-content">
               <div class="limited-item" v-if="selectedEvent.limitedIngredients.length > 0">
                 <span class="limited-icon">🧪</span>
-                <span>限定配料: {{ selectedEvent.limitedIngredients.length }}种</span>
+                <span>{{ t('events.limitedIngredients', { count: selectedEvent.limitedIngredients.length }) }}</span>
               </div>
               <div class="limited-item" v-if="selectedEvent.limitedCustomers.length > 0">
                 <span class="limited-icon">👤</span>
-                <span>限定顾客: {{ selectedEvent.limitedCustomers.length }}位</span>
+                <span>{{ t('events.limitedCustomers', { count: selectedEvent.limitedCustomers.length }) }}</span>
               </div>
             </div>
           </div>
 
           <!-- 任务列表 -->
           <div class="event-section">
-            <h4>📋 活动任务</h4>
+            <h4>{{ t('events.missions') }}</h4>
             <div class="missions-list">
               <div
                 v-for="mission in selectedEvent.missions"
@@ -161,13 +162,13 @@ function getDaysRemaining(event: SeasonalEvent): number {
                 :class="{ completed: isMissionCompleted(mission.id) }"
               >
                 <div class="mission-header">
-                  <div class="mission-name">{{ mission.name }}</div>
+                  <div class="mission-name">{{ t('events.mission.' + mission.id) || mission.name }}</div>
                   <div class="mission-reward">
                     💰 {{ mission.reward }}
                   </div>
                 </div>
                 
-                <div class="mission-desc">{{ mission.description }}</div>
+                <div class="mission-desc">{{ t('events.mission.' + mission.id + '_desc') || mission.description }}</div>
                 
                 <div class="mission-progress">
                   <div class="progress-bar">
@@ -187,10 +188,10 @@ function getDaysRemaining(event: SeasonalEvent): number {
                   class="btn-claim"
                   @click="handleClaimReward(mission.id)"
                 >
-                  🎁 领取奖励
+                  {{ t('buttons.claimReward') }}
                 </button>
                 <div v-else-if="isMissionClaimed(mission.id)" class="claimed-label">
-                  ✅ 已领取
+                  {{ t('buttons.claimed') }}
                 </div>
               </div>
             </div>
@@ -199,10 +200,10 @@ function getDaysRemaining(event: SeasonalEvent): number {
           <!-- 完成奖励 -->
           <div class="event-section" v-if="selectedEventProgress?.completed">
             <div class="completion-reward">
-              <h4>🎊 活动完成！</h4>
-              <p>恭喜完成所有任务！</p>
+              <h4>{{ t('events.completionReward') }}</h4>
+              <p>{{ t('events.completionCongrats') }}</p>
               <div class="completion-bonus">
-                <span class="bonus-label">额外奖励:</span>
+                <span class="bonus-label">{{ t('events.bonusReward') }}</span>
                 <span class="bonus-value">💰 {{ selectedEvent.rewards.completionReward }}</span>
               </div>
             </div>

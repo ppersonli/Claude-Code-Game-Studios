@@ -22,6 +22,9 @@ const games: Game[] = [
   { slug: 'boba-clicker', name: '波波点击', desc: '疯狂点击，升级prestige', emoji: '👆', color: '#8b5cf6', tag: '点击' },
   { slug: 'boba-tower-defense', name: '波波塔防', desc: '合成升级，防御入侵者', emoji: '🏰', color: '#ef4444', tag: '塔防' },
   { slug: 'orbit-odyssey', name: '轨道奥德赛', desc: '发射飞船，探索宇宙，Prestige循环', emoji: '🚀', color: '#00d4ff', tag: '放置' },
+  { slug: 'space-factory-idle', name: '太空工厂', desc: '星际工厂帝国，升级产线，Prestige重置', emoji: '🏭', color: '#aa00ff', tag: '放置' },
+  { slug: 'dungeon-defense-idle', name: '地牢防御', desc: '塔防+放置，建塔打怪，离线战斗', emoji: '🏰', color: '#ff5722', tag: '塔防' },
+  { slug: 'bounce-golf', name: 'Bounce Golf', desc: '一杆进洞？球会弹到外太空', emoji: '⛳', color: '#00ff88', tag: '物理' },
 ]
 
 function play(slug: string) {

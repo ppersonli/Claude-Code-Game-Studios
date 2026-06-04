@@ -61,6 +61,7 @@ export default defineConfig({
         'space-factory-idle': resolve(__dirname, 'src/games/space-factory-idle/index.html'),
         'dungeon-defense-idle': resolve(__dirname, 'src/games/dungeon-defense-idle/index.html'),
         'space-farm-idle': resolve(__dirname, 'src/games/space-farm-idle/index.html'),
+        'bounce-golf': resolve(__dirname, 'src/games/bounce-golf/index.html'),
       },
     },
   },

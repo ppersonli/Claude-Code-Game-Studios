@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { ALL_RECIPES, loadRecipeBook, type RecipeEntry } from '../data/recipes'
+import { t } from '../i18n'
 
 const props = defineProps<{
   visible: boolean
@@ -38,11 +39,11 @@ function getCategoryIcon(category: RecipeEntry['category']): string {
 
 function getCategoryName(category: RecipeEntry['category']): string {
   switch (category) {
-    case 'basic': return '基础奶茶'
-    case 'creative': return '创意特调'
-    case 'secret': return '隐藏配方'
-    case 'seasonal': return '季节限定'
-    default: return '未知'
+    case 'basic': return t('recipes.basic')
+    case 'creative': return t('recipes.creative')
+    case 'secret': return t('recipes.secret')
+    case 'seasonal': return t('recipes.seasonal')
+    default: return t('recipes.unknown')
   }
 }
 
@@ -66,13 +67,13 @@ const groupedRecipes = computed(() => {
   <div v-if="visible" class="recipe-book-overlay" @click="emit('close')">
     <div class="recipe-book" @click.stop>
       <div class="book-header">
-        <h2>📖 配方图鉴</h2>
+        <h2>📖 {{ t('recipes.title') }}</h2>
         <button class="btn-close" @click="emit('close')">✕</button>
       </div>
       
       <div class="progress-bar">
         <div class="progress-text">
-          收集进度: {{ unlockedCount }}/{{ totalCount }} ({{ progressPercent }}%)
+          {{ t('recipes.progress', { unlocked: unlockedCount, total: totalCount, percent: progressPercent }) }}
         </div>
         <div class="progress-track">
           <div class="progress-fill" :style="{ width: progressPercent + '%' }" />
@@ -91,17 +92,17 @@ const groupedRecipes = computed(() => {
             >
               <div v-if="isUnlocked(recipe)" class="recipe-content">
                 <div class="recipe-icon">{{ getCategoryIcon(recipe.category) }}</div>
-                <div class="recipe-name">{{ recipe.name }}</div>
+                <div class="recipe-name">{{ t('recipes.' + recipe.id) || recipe.name }}</div>
                 <div class="recipe-ingredients">
                   {{ recipe.ingredients.join(' + ') }}
                 </div>
                 <div v-if="recipeBook[recipe.id]" class="recipe-stats">
-                  制作次数: {{ recipeBook[recipe.id].timesMade }}
+                  {{ t('recipes.timesMade', { count: recipeBook[recipe.id].timesMade }) }}
                 </div>
               </div>
               <div v-else class="recipe-locked">
                 <div class="locked-icon">?</div>
-                <div class="locked-text">{{ recipe.isSecret ? '隐藏配方' : '未解锁' }}</div>
+                <div class="locked-text">{{ recipe.isSecret ? t('recipes.hidden') : t('recipes.locked') }}</div>
               </div>
             </div>
           </div>

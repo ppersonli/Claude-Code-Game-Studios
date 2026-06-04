@@ -337,11 +337,12 @@ onUnmounted(() => {
         <div class="overlay-header">
           <h2>Upgrades</h2>
           <span class="resource stardust">✨ {{ stardust.toLocaleString() }}</span>
+          <button class="btn btn-sm btn-ghost" @click="goToMenu">☰</button>
         </div>
         <div class="upgrade-list">
           <div v-for="(config, key) in GAME_CONFIG.UPGRADES" :key="key" class="upgrade-item"
                :class="{ 'maxed': getUpgradeInfo(key as UpgradeKey).maxed }">
-            <div class="upgrade-icon">{{ config.icon }}</div>
+            <img :src="config.icon" class="upgrade-icon" />
             <div class="upgrade-info">
               <div class="upgrade-name">{{ config.name }}</div>
               <div class="upgrade-level">Lv.{{ getUpgradeInfo(key as UpgradeKey).level }} / {{ config.maxLevel }}</div>
@@ -363,11 +364,12 @@ onUnmounted(() => {
         <div class="overlay-header">
           <h2>Ships</h2>
           <span class="resource stardust">✨ {{ stardust.toLocaleString() }}</span>
+          <button class="btn btn-sm btn-ghost" @click="goToMenu">☰</button>
         </div>
         <div class="ship-list">
           <div v-for="ship in GAME_CONFIG.SHIPS" :key="ship.id" class="ship-item"
                :class="{ 'active': state.activeShip === ship.id, 'locked': !state.unlockedShips.includes(ship.id as any) }">
-            <div class="ship-icon" :style="{ color: '#' + ship.color.toString(16).padStart(6, '0') }">🚀</div>
+            <img :src="ship.icon" class="ship-icon" />
             <div class="ship-info">
               <div class="ship-name">{{ ship.name }}</div>
               <div class="ship-stats">Speed: {{ ship.speed }}x | Fuel: {{ ship.fuel }}x</div>
@@ -395,6 +397,7 @@ onUnmounted(() => {
         <div class="overlay-header">
           <h2>Star Systems</h2>
           <span class="resource stardust">✨ {{ stardust.toLocaleString() }}</span>
+          <button class="btn btn-sm btn-ghost" @click="goToMenu">☰</button>
         </div>
         <div class="system-list">
           <div v-for="(system, i) in STAR_SYSTEMS" :key="system.id" class="system-item"
@@ -420,7 +423,10 @@ onUnmounted(() => {
     <!-- Prestige Screen -->
     <div v-if="gamePhase === 'prestige'" class="overlay-screen">
       <div class="overlay-content prestige-content">
-        <h2>⭐ Prestige</h2>
+        <div class="overlay-header">
+          <h2>⭐ Prestige</h2>
+          <button class="btn btn-sm btn-ghost" @click="goToMenu">☰</button>
+        </div>
         <p class="prestige-desc">
           Reset all progress to earn <strong>Star Cores</strong> — permanent multipliers that make each run faster.
         </p>
@@ -467,6 +473,7 @@ onUnmounted(() => {
         <div class="overlay-header">
           <h2>📅 Daily Challenge</h2>
           <span v-if="saveSystem.isDailyCompletedToday()" class="daily-completed">✅ Completed</span>
+          <button class="btn btn-sm btn-ghost" @click="goToMenu">☰</button>
         </div>
         <div class="daily-challenge-card">
           <div class="challenge-icon">{{ todayChallenge.icon }}</div>
@@ -490,6 +497,7 @@ onUnmounted(() => {
         <div class="overlay-header">
           <h2>🏅 Achievements</h2>
           <span class="achievement-count">{{ saveSystem.getAchievementCount() }}/{{ ACHIEVEMENTS.length }}</span>
+          <button class="btn btn-sm btn-ghost" @click="goToMenu">☰</button>
         </div>
         <div class="achievement-list">
           <div v-for="achievement in ACHIEVEMENTS" :key="achievement.id" class="achievement-item"
@@ -816,7 +824,7 @@ onUnmounted(() => {
   background: rgba(255, 215, 0, 0.05);
 }
 
-.upgrade-icon { font-size: 24px; }
+.upgrade-icon { width: 36px; height: 36px; object-fit: contain; border-radius: 6px; }
 .upgrade-info { flex: 1; }
 .upgrade-name { font-weight: 600; }
 .upgrade-level { font-size: 12px; color: rgba(255, 255, 255, 0.5); }
@@ -845,7 +853,7 @@ onUnmounted(() => {
 }
 
 .ship-item.locked { opacity: 0.6; }
-.ship-icon { font-size: 24px; }
+.ship-icon { width: 40px; height: 40px; object-fit: contain; border-radius: 8px; }
 .ship-info { flex: 1; }
 .ship-name { font-weight: 600; }
 .ship-stats { font-size: 12px; color: rgba(255, 255, 255, 0.5); }

@@ -41,6 +41,14 @@ export default {
     common: 'Commun',
     rare: 'Rare',
     legendary: 'Légendaire',
+    wants: 'Veut',
+    office_worker: '🧑‍💼 Pressé',
+    student: '👧 Bec sucré',
+    grandpa: '👴 Santé',
+    blogger: '🤳 Esthétique',
+    demon: '😈 Imprévisible',
+    vip_label: '🌈 VIP',
+    mystery: '🎁 Mystère',
   },
   
   ingredients: {
@@ -237,6 +245,7 @@ export default {
     timeLeft: 'Temps',
     levelUp: '⬆️ Niveau {level} !',
     newIngredients: 'Nouveaux ingrédients débloqués !',
+    shelfLabel: 'Étagère d\'ingrédients',
   },
   
   result: {

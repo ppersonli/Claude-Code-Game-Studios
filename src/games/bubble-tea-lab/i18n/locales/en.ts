@@ -45,6 +45,15 @@ export default {
     common: 'Common',
     rare: 'Rare',
     legendary: 'Legendary',
+    // 订单和性格
+    wants: 'Wants',
+    office_worker: '🧑‍💼 In a Hurry',
+    student: '👧 Sweet Tooth',
+    grandpa: '👴 Health Conscious',
+    blogger: '🤳 Aesthetic Lover',
+    demon: '😈 Unpredictable',
+    vip_label: '🌈 VIP',
+    mystery: '🎁 Mystery',
   },
   
   // 配料相关
@@ -255,6 +264,7 @@ export default {
     timeLeft: 'Time Left',
     levelUp: '⬆️ Level {level}!',
     newIngredients: 'New ingredients unlocked!',
+    shelfLabel: 'Ingredient Shelf',
   },
   
   // 结果画面

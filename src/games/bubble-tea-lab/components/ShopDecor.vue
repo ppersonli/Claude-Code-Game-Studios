@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import { t } from '../i18n'
 import {
   ALL_DECOR,
   loadShopDecor,
@@ -36,11 +37,11 @@ try {
 const currentTab = ref<DecorItem['category']>('shop_front')
 
 const tabs = [
-  { id: 'shop_front', name: '🏪 店面外观' },
-  { id: 'table', name: '🪑 桌椅' },
-  { id: 'wall', name: '🖼️ 墙面装饰' },
-  { id: 'shelf', name: '🗄️ 配料架' },
-  { id: 'cup', name: '🥤 杯子' },
+  { id: 'shop_front', labelKey: 'decor.shop_front' },
+  { id: 'table', labelKey: 'decor.table' },
+  { id: 'wall', labelKey: 'decor.wall' },
+  { id: 'shelf', labelKey: 'decor.shelf' },
+  { id: 'cup', labelKey: 'decor.cup' },
 ] as const
 
 const filteredItems = computed(() => {
@@ -95,32 +96,32 @@ function equipItem(itemId: string, category: string) {
   <div v-if="visible" class="shop-decor-overlay" @click="emit('close')">
     <div class="shop-decor" @click.stop>
       <div class="shop-header">
-        <h2>🎨 店铺装修</h2>
+        <h2>🎨 {{ t('decor.title') }}</h2>
         <button class="btn-close" @click="emit('close')">✕</button>
       </div>
 
       <div class="decor-stats">
         <div class="stat-item">
-          <span class="stat-label">💰 金币:</span>
+          <span class="stat-label">💰 {{ t('decor.coins') }}</span>
           <span class="stat-value">{{ coins }}</span>
         </div>
         <div class="stat-item">
-          <span class="stat-label">⭐ 等级:</span>
+          <span class="stat-label">⭐ {{ t('decor.level') }}</span>
           <span class="stat-value">Lv.{{ level }}</span>
         </div>
       </div>
 
       <div class="decor-effects" v-if="decorEffect.patienceBonus > 0 || decorEffect.tipBonus > 0 || decorEffect.scoreBonus > 0">
-        <h3>🎁 当前装修效果</h3>
+        <h3>🎁 {{ t('decor.currentEffects') }}</h3>
         <div class="effect-list">
           <span v-if="decorEffect.patienceBonus > 0" class="effect-badge">
-            耐心 +{{ decorEffect.patienceBonus }}秒
+            {{ t('decor.patience', { value: decorEffect.patienceBonus }) }}
           </span>
           <span v-if="decorEffect.tipBonus > 0" class="effect-badge">
-            小费 +{{ (decorEffect.tipBonus * 100).toFixed(0) }}%
+            {{ t('decor.tip', { value: (decorEffect.tipBonus * 100).toFixed(0) }) }}
           </span>
           <span v-if="decorEffect.scoreBonus > 0" class="effect-badge">
-            得分 +{{ (decorEffect.scoreBonus * 100).toFixed(0) }}%
+            {{ t('decor.score', { value: (decorEffect.scoreBonus * 100).toFixed(0) }) }}
           </span>
         </div>
       </div>
@@ -133,7 +134,7 @@ function equipItem(itemId: string, category: string) {
           :class="{ active: currentTab === tab.id }"
           @click="currentTab = tab.id"
         >
-          {{ tab.name }}
+          {{ t(tab.labelKey) }}
         </button>
       </div>
 
@@ -154,12 +155,12 @@ function equipItem(itemId: string, category: string) {
             <img :src="item.img" :alt="item.name" />
           </div>
           <div class="decor-image placeholder" v-else>
-            <span>无</span>
+            <span>{{ t('decor.noDecor') }}</span>
           </div>
           
           <div class="decor-info">
-            <div class="decor-name">{{ item.name }}</div>
-            <div class="decor-desc">{{ item.description }}</div>
+            <div class="decor-name">{{ t('decor.' + item.id) || item.name }}</div>
+            <div class="decor-desc">{{ t('decor.desc.' + item.id) || item.description }}</div>
             
             <div class="decor-effects" v-if="item.effect.patienceBonus || item.effect.tipBonus || item.effect.scoreBonus">
               <span v-if="item.effect.patienceBonus" class="effect-small">
@@ -174,10 +175,10 @@ function equipItem(itemId: string, category: string) {
             </div>
 
             <div v-if="isEquipped(item.id, item.category)" class="decor-status equipped">
-              ✅ 使用中
+              ✅ {{ t('buttons.inUse') }}
             </div>
             <div v-else-if="isUnlocked(item.id)" class="decor-status unlocked">
-              点击装备
+              {{ t('buttons.equip') }}
             </div>
             <div v-else-if="canBuy(item)" class="decor-status can-buy">
               💰 {{ item.cost }}

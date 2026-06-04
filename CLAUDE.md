@@ -72,6 +72,57 @@ python3 ~/.hermes/scripts/request-art.py \
 - ❌ 不准用 Canvas/SVG 程序化生成图形当图片
 - ❌ 不准用纯色背景+文字当界面
 - ❌ 不准用占位符图片提交
+- ❌ **不准用emoji当图标！** 必须用Gemini生成的真实图片
+
+### ⚠️ 素材生成强制流程（违反=打回）
+
+**每个游戏必须先生成素材，再写代码！**
+
+#### Step 1: 列出需要的素材清单
+```bash
+# 检查现有素材
+find public/assets/$(game-name) -name "*.webp" | wc -l
+
+# 检查代码中引用的素材
+grep -rn "assets/" src/games/$(game-name)/ --include="*.ts" --include="*.vue" | grep -oE "assets/[^'\"]+\.webp" | sort -u
+```
+
+#### Step 2: 用gen-art.py批量生成
+```bash
+# 批量生成（推荐）
+python3 ~/.hermes/scripts/gen-art.py \
+  --project $(game-name) \
+  --batch "1:1|kawaii planet icon, cute cartoon, white background ;; 1:1|factory machine icon, kawaii style, white background" \
+  --dir ~/Desktop/cc-games/public/assets/$(game-name) \
+  --remove-bg
+
+# 单张生成
+python3 ~/.hermes/scripts/gen-art.py \
+  --desc "kawaii rocket icon, cute cartoon, white background" \
+  --ratio 1:1 \
+  --output ~/Desktop/cc-games/public/assets/$(game-name)/icon.webp \
+  --remove-bg
+```
+
+#### Step 3: 质量检查
+```bash
+# 检查文件大小（必须>5KB）
+find public/assets/$(game-name) -name "*.webp" -size -5k -exec echo "❌ 占位符: {}" \;
+
+# 检查尺寸（图标必须>=512x512）
+for f in public/assets/$(game-name)/*.webp; do
+  echo "$(basename $f): $(stat -f%z $f) bytes"
+done
+```
+
+#### Step 4: 参考提示词模板
+详见 `GEMINI-PROMPTS.md`，包含：
+- 游戏背景模板
+- 角色/人物模板
+- 道具/图标模板
+- UI元素模板
+- 特效素材模板
+- 各游戏专用模板
 
 ### 图片引用方式
 ```typescript
