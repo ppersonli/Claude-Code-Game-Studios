@@ -14,6 +14,7 @@ import { RECIPES, getRecipesForPlanet } from './data/recipes'
 import { UPGRADES, getUpgradesByCategory } from './data/upgrades'
 import { EMPLOYEES } from './data/employees'
 import { ACHIEVEMENTS, type AchievementCheckState } from './data/achievements'
+import { getEncyclopediaPlanets, getEncyclopediaRecipes, getEncyclopediaEmployees, getCollectionProgress } from './data/encyclopedia'
 import { getTodayChallenge, isDailyCompletedToday, completeDailyChallenge, getDailyChallengeProgress, type DailyChallenge, type DailyChallengeContext, type DailyChallengeProgress } from './data/daily-challenges'
 import { translations, getLocale, type Locale } from './i18n/translations'
 import { GameScene } from './phaser/scenes/GameScene'
@@ -30,7 +31,7 @@ const state = reactive<GameState>(loadState())
 const currentPlanetId = ref(state.unlockedPlanets[state.unlockedPlanets.length - 1] || 'earth')
 
 // UI state
-type Screen = 'menu' | 'game' | 'upgrades' | 'employees' | 'planets' | 'prestige' | 'achievements' | 'daily'
+type Screen = 'menu' | 'game' | 'upgrades' | 'employees' | 'planets' | 'prestige' | 'achievements' | 'daily' | 'collect'
 const screen = ref<Screen>('menu')
 const showOfflineReward = ref(false)
 const offlineRewardAmount = ref(0)
@@ -65,6 +66,10 @@ const dailyProgress = computed<DailyChallengeProgress>(() =>
 // Achievement notification (rich toast with icon)
 const achievementNotify = ref<{ name: string; description: string; reward: string; icon: string } | null>(null)
 let achievementNotifyTimer: ReturnType<typeof setTimeout> | null = null
+
+// Encyclopedia sub-tab
+type CollectTab = 'planets' | 'recipes' | 'employees'
+const collectTab = ref<CollectTab>('planets')
 
 // Combo system
 const comboCount = ref(0)
@@ -608,6 +613,7 @@ onUnmounted(() => {
           <button class="tab-btn" @click="goTo('planets')">🌍</button>
           <button class="tab-btn" @click="goTo('daily')">📅</button>
           <button class="tab-btn" @click="goTo('achievements')">🏅</button>
+          <button class="tab-btn" @click="goTo('collect')">📖</button>
           <button class="tab-btn" :class="{ 'btn-glow': canPrestigeNow }" @click="goTo('prestige')">⭐</button>
         </div>
       </div>
@@ -835,6 +841,78 @@ onUnmounted(() => {
                 @click="handleCompleteDaily">
           {{ t('collect') }} 📅
         </button>
+        <button class="btn btn-secondary" @click="goBack">{{ t('back') }}</button>
+      </div>
+    </div>
+
+    <!-- Collection Encyclopedia -->
+    <div v-if="screen === 'collect'" class="overlay-screen">
+      <div class="overlay-content">
+        <div class="overlay-header">
+          <h2>📖 {{ t('encyclopedia') }}</h2>
+          <span class="collect-progress">{{ getCollectionProgress(state).overall.discovered }}/{{ getCollectionProgress(state).overall.total }}</span>
+          <button class="btn-icon" @click="goBack">✕</button>
+        </div>
+
+        <!-- Sub-tabs -->
+        <div class="collect-tabs">
+          <button class="tab-pill" :class="{ active: collectTab === 'planets' }" @click="collectTab = 'planets'">
+            🌍 {{ t('planets') }} ({{ getCollectionProgress(state).planets.discovered }}/{{ getCollectionProgress(state).planets.total }})
+          </button>
+          <button class="tab-pill" :class="{ active: collectTab === 'recipes' }" @click="collectTab = 'recipes'">
+            ⚗️ {{ t('recipes') }} ({{ getCollectionProgress(state).recipes.discovered }}/{{ getCollectionProgress(state).recipes.total }})
+          </button>
+          <button class="tab-pill" :class="{ active: collectTab === 'employees' }" @click="collectTab = 'employees'">
+            👷 {{ t('employees') }} ({{ getCollectionProgress(state).employees.discovered }}/{{ getCollectionProgress(state).employees.total }})
+          </button>
+        </div>
+
+        <!-- Planet entries -->
+        <div v-if="collectTab === 'planets'" class="collect-list">
+          <div v-for="entry in getEncyclopediaPlanets(state)" :key="entry.id"
+               class="collect-card" :class="{ discovered: entry.discovered }">
+            <img v-if="entry.discovered" :src="entry.icon" class="cc-icon" />
+            <span v-else class="cc-icon cc-locked">🔒</span>
+            <div class="cc-info">
+              <div class="cc-name">{{ entry.name }}</div>
+              <div class="cc-desc">{{ entry.description }}</div>
+              <div v-if="entry.stats" class="cc-stats">
+                <span v-for="s in entry.stats" :key="s.label" class="cc-stat">{{ s.label }}: {{ s.value }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Recipe entries -->
+        <div v-if="collectTab === 'recipes'" class="collect-list">
+          <div v-for="entry in getEncyclopediaRecipes(state)" :key="entry.id"
+               class="collect-card" :class="{ discovered: entry.discovered }">
+            <span class="cc-icon cc-recipe-icon">{{ entry.discovered ? '⚗️' : '🔒' }}</span>
+            <div class="cc-info">
+              <div class="cc-name">{{ entry.name }}</div>
+              <div class="cc-desc" v-if="entry.discovered">{{ entry.planetId }}</div>
+              <div v-if="entry.stats" class="cc-stats">
+                <span v-for="s in entry.stats" :key="s.label" class="cc-stat">{{ s.label }}: {{ s.value }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Employee entries -->
+        <div v-if="collectTab === 'employees'" class="collect-list">
+          <div v-for="entry in getEncyclopediaEmployees(state)" :key="entry.id"
+               class="collect-card" :class="{ discovered: entry.discovered }">
+            <span class="cc-icon cc-employee-icon">{{ entry.discovered ? entry.icon : '🔒' }}</span>
+            <div class="cc-info">
+              <div class="cc-name">{{ entry.name }}</div>
+              <div class="cc-desc">{{ entry.description }}</div>
+              <div v-if="entry.stats" class="cc-stats">
+                <span v-for="s in entry.stats" :key="s.label" class="cc-stat">{{ s.label }}: {{ s.value }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <button class="btn btn-secondary" @click="goBack">{{ t('back') }}</button>
       </div>
     </div>
@@ -1189,6 +1267,23 @@ onUnmounted(() => {
 .ac-name { font-weight: 600; font-size: 14px; }
 .ac-desc { font-size: 11px; color: rgba(255,255,255,0.5); }
 .ac-status { font-size: 18px; }
+
+/* ============ ENCYCLOPEDIA ============ */
+.collect-progress { font-size: 13px; color: rgba(255,255,255,0.6); }
+.collect-tabs { display: flex; gap: 6px; margin-bottom: 12px; flex-wrap: wrap; }
+.collect-tabs .tab-pill { flex: 1; min-width: 0; text-align: center; font-size: 12px; padding: 8px 6px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: rgba(255,255,255,0.6); cursor: pointer; transition: all var(--transition-normal); white-space: nowrap; }
+.collect-tabs .tab-pill.active { background: rgba(0,229,255,0.12); border-color: rgba(0,229,255,0.4); color: #00e5ff; }
+.collect-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; max-height: 55vh; overflow-y: auto; }
+.collect-card { display: flex; align-items: center; gap: 12px; padding: 12px 14px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 10px; opacity: 0.45; transition: all var(--transition-normal); }
+.collect-card.discovered { opacity: 1; border-color: rgba(0,229,255,0.2); background: rgba(0,229,255,0.04); }
+.cc-icon { width: 44px; height: 44px; object-fit: contain; border-radius: 8px; border: 2px solid rgba(255,255,255,0.15); flex-shrink: 0; }
+.cc-locked { display: flex; align-items: center; justify-content: center; font-size: 20px; background: rgba(255,255,255,0.03); border: 2px solid rgba(255,255,255,0.08); border-radius: 8px; }
+.cc-recipe-icon, .cc-employee-icon { font-size: 22px; display: flex; align-items: center; justify-content: center; }
+.cc-info { flex: 1; min-width: 0; }
+.cc-name { font-weight: 600; font-size: 14px; margin-bottom: 2px; }
+.cc-desc { font-size: 11px; color: rgba(255,255,255,0.5); margin-bottom: 4px; }
+.cc-stats { display: flex; gap: 10px; flex-wrap: wrap; }
+.cc-stat { font-size: 11px; color: rgba(0,229,255,0.7); background: rgba(0,229,255,0.08); padding: 2px 8px; border-radius: 4px; }
 
 .daily-done { color: #00e676; font-size: 13px; font-weight: 600; }
 .daily-card { background: rgba(255,255,255,0.05); border: 1px solid rgba(0,229,255,0.3); border-radius: 12px; padding: 24px; text-align: center; margin-bottom: 16px; }

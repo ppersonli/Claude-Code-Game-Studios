@@ -389,7 +389,7 @@ onUnmounted(() => clearTimer(state))
   <div class="game-root" :class="{ 'screen-shake': state.screenShake }">
     <!-- Start Screen -->
     <div v-if="screen === 'start'" class="screen start-screen">
-      <img :src="`${BASE_URL}assets/bubble-tea-lab/cover.webp`" alt="Bubble Tea Lab" class="cover-img">
+      <img :src="`${BASE_URL}assets/cover.webp`" alt="Bubble Tea Lab" class="cover-img">
       <h1>🧋 {{ t('title') }}</h1>
       <p class="subtitle">{{ t('subtitle') }}</p>
       <div class="coins-bar">💰 {{ state.totalCoins }}</div>
