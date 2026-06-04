@@ -97,3 +97,42 @@ export function getTodayChallenge(): DailyChallenge {
 export function isDailyCompletedToday(lastCompletedDate: string): boolean {
   return lastCompletedDate === getTodayDate()
 }
+
+/**
+ * Complete today's daily challenge.
+ * Updates the state with completion date, streak, and bonus reward.
+ * Returns true if successfully completed, false if already completed today.
+ */
+export function completeDailyChallenge(
+  state: { lastDailyCompleted: string; dailyStreak: number; coins: number; totalCoins: number },
+  challenge: DailyChallenge,
+): boolean {
+  // Don't double-complete
+  if (isDailyCompletedToday(state.lastDailyCompleted)) return false
+
+  // Check if streak continues (last completion was yesterday)
+  const yesterday = new Date()
+  yesterday.setDate(yesterday.getDate() - 1)
+  const yesterdayStr = `${yesterday.getFullYear()}-${String(yesterday.getMonth() + 1).padStart(2, '0')}-${String(yesterday.getDate()).padStart(2, '0')}`
+
+  const streakContinues = state.lastDailyCompleted === yesterdayStr
+
+  // Mark completed
+  state.lastDailyCompleted = getTodayDate()
+
+  // Update streak
+  if (streakContinues) {
+    state.dailyStreak += 1
+  } else {
+    state.dailyStreak = 1
+  }
+
+  // Award bonus coins
+  const bonus = Math.floor(state.coins * (challenge.bonusMultiplier - 1))
+  if (bonus > 0) {
+    state.coins += bonus
+    state.totalCoins += bonus
+  }
+
+  return true
+}

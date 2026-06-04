@@ -52,7 +52,7 @@ export const UPGRADES: Upgrade[] = [
     category: 'production',
     name: 'Quality Boost',
     description: 'Improve product quality',
-    effect: '+25% sell price',
+    effect: '+25% output quantity',
     baseCost: 1000,
     costMultiplier: 1.20,
     maxLevel: 20,

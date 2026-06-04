@@ -14,7 +14,7 @@ import { RECIPES, getRecipesForPlanet } from './data/recipes'
 import { UPGRADES, getUpgradesByCategory } from './data/upgrades'
 import { EMPLOYEES } from './data/employees'
 import { ACHIEVEMENTS, type AchievementCheckState } from './data/achievements'
-import { getTodayChallenge, isDailyCompletedToday, type DailyChallenge } from './data/daily-challenges'
+import { getTodayChallenge, isDailyCompletedToday, completeDailyChallenge, type DailyChallenge, type DailyChallengeContext } from './data/daily-challenges'
 import { translations, getLocale, type Locale } from './i18n/translations'
 import { GameScene } from './phaser/scenes/GameScene'
 import type { GameSceneData } from './phaser/scenes/GameScene'
@@ -206,6 +206,22 @@ function startProductionLoop() {
     }
 
     checkAchievements()
+    // Auto-complete daily challenge if conditions are met
+    if (!isDailyCompletedToday(state.lastDailyCompleted)) {
+      const challenge = getTodayChallenge()
+      const ctx: DailyChallengeContext = {
+        totalCoinsEarned: state.sessionCoinsEarned,
+        itemsProduced: state.sessionItemsProduced,
+        upgradesMade: state.sessionUpgradesMade,
+        activeTime: (Date.now() - state.sessionStart) / 1000,
+        prestigeDone: false,
+      }
+      if (challenge.validate(ctx)) {
+        completeDailyChallenge(state, challenge)
+        achievementToast.value = `📅 Daily Complete! +${challenge.bonusMultiplier}x bonus!`
+        setTimeout(() => { achievementToast.value = '' }, 3000)
+      }
+    }
     saveState(state)
 
     // Push fresh state to Phaser
@@ -385,6 +401,20 @@ function goToMenu() {
 }
 
 function collectOfflineReward() { showOfflineReward.value = false }
+
+function handleCompleteDaily() {
+  const challenge = todayChallenge.value
+  if (isDailyCompletedToday(state.lastDailyCompleted)) return
+  const success = completeDailyChallenge(state, challenge)
+  if (success) {
+    audioEngine.play('levelup')
+    vibrate(20)
+    spawnParticles(240, 300, '#ffd740', 12)
+    achievementToast.value = `📅 Daily Complete! +${challenge.bonusMultiplier}x bonus!`
+    setTimeout(() => { achievementToast.value = '' }, 3000)
+    saveState(state)
+  }
+}
 
 async function collectDoubleOffline() {
   const rewarded = await adManager.requestRewardedAd()
@@ -754,6 +784,11 @@ onUnmounted(() => {
           <div class="dc-bonus">{{ t('bonus') }}: ×{{ todayChallenge.bonusMultiplier }}</div>
           <div class="dc-streak" v-if="state.dailyStreak > 0">🔥 {{ t('streak') }}: {{ state.dailyStreak }} days</div>
         </div>
+        <button v-if="!isDailyCompletedToday(state.lastDailyCompleted)" class="btn btn-primary"
+                data-testid="daily-complete-btn"
+                @click="handleCompleteDaily">
+          {{ t('collect') }} 📅
+        </button>
         <button class="btn btn-secondary" @click="goBack">{{ t('back') }}</button>
       </div>
     </div>

@@ -7,6 +7,7 @@ import { calcCost, CONSTANTS } from './constants'
 import type { GameState, ProductionLineState } from './game-state'
 import { PLANETS } from '../data/planets'
 import { RECIPES as RECIPE_ARRAY, type Recipe } from '../data/recipes'
+import { getEventOutputMult } from './events'
 
 /* ── Recipe Lookup ──────────────────────────────────────────────── */
 
@@ -44,10 +45,13 @@ export function processProductionTick(state: GameState): number {
       const directorBonus = 1 + (state.employees['director'] || 0) * 0.2
       const prestigeMult = state.prestigeMult
 
+      // Apply event output multiplier
+      const eventMult = getEventOutputMult(state)
+
       // Produce items with all multipliers applied
       const baseOutput = recipe.baseOutput * (1 + (line.level - 1) * 0.5)
       const produceAmount = Math.max(1, Math.floor(
-        baseOutput * speedMult * qualityMult * engineerBonus * directorBonus * prestigeMult
+        baseOutput * speedMult * qualityMult * engineerBonus * directorBonus * prestigeMult * eventMult
       ))
 
       // Check if stock is full
