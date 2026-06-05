@@ -41,12 +41,25 @@ export interface GameState {
   // Decorations owned
   decorations: string[]
 
+  // Achievements claimed
+  achievements: string[]
+
+  // Daily challenge
+  dailyChallenge: {
+    date: string         // 'YYYY-MM-DD'
+    templateId: string   // challenge template id
+    target: number       // target value
+    startValue: number   // stat value when challenge started
+    claimed: boolean     // reward claimed?
+  } | null
+
   // Stats
   stats: {
     totalCoinsEarned: number
     totalFlowersGrown: number
     totalHarvests: number
     totalPlayTime: number  // seconds
+    maxComboCount: number
   }
 
   // Session tracking

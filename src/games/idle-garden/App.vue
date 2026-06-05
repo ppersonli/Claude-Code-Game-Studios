@@ -13,6 +13,9 @@ import { GameScene } from './phaser/scenes/GameScene'
 import type { GameSceneData } from './phaser/scenes/GameScene'
 import type { GameState } from './data/types'
 import { AdManager } from '../../services/AdManager'
+import { getAvailableDecorations, buyDecoration, isDecorationOwned, getDecorationBonus, DECORATIONS } from './systems/DecorationSystem'
+import { checkAchievements, claimAchievement, getAchievementProgress, ACHIEVEMENTS } from './systems/AchievementSystem'
+import { refreshDailyChallenge, getChallengeProgress, isChallengeComplete, claimChallengeReward } from './systems/ChallengeSystem'
 
 // i18n
 const savedLocale = typeof localStorage !== 'undefined' ? localStorage.getItem('idle-garden-locale') : null
@@ -23,7 +26,7 @@ const t = (key: string) => translate(key, locale.value)
 const state = reactive<GameState>(loadState())
 
 // UI state
-type Screen = 'menu' | 'game' | 'shop' | 'prestige' | 'settings'
+type Screen = 'menu' | 'game' | 'shop' | 'prestige' | 'settings' | 'achievements'
 const screen = ref<Screen>('menu')
 const showOfflineReward = ref(false)
 const offlineRewardAmount = ref(0)
@@ -57,6 +60,18 @@ const priceBonus = computed(() => getPriceBonusPercent(state.spPriceUpgrades))
 const xpRequired = computed(() => calcXpRequired(state.level))
 const xpPercent = computed(() => Math.min(1, state.experience / xpRequired.value))
 const incomePerSec = computed(() => calcIncomePerSecond(state))
+
+// Decorations
+const availableDecorations = computed(() => getAvailableDecorations(state.level, state.decorations))
+const decoBonus = computed(() => getDecorationBonus(state))
+
+// Achievements
+const achievementProgress = computed(() => getAchievementProgress(state))
+const newAchievements = ref<string[]>([])
+
+// Daily challenge
+const challengeProgress = computed(() => getChallengeProgress(state))
+const challengeComplete = computed(() => isChallengeComplete(state))
 
 // ── Phaser integration ──────────────────────────────────────────
 
@@ -118,6 +133,9 @@ function startGame(): void {
 
   adManager.gameplayStart()
 
+  // Refresh daily challenge
+  refreshDailyChallenge(state)
+
   // Check offline earnings
   const offline = calculateOfflineEarnings(state)
   if (offline > 0) {
@@ -174,7 +192,14 @@ function handleHarvest(potId: number): void {
   const earnings = harvestPot(state, potId, Date.now())
   if (earnings > 0) {
     state.experience += CONSTANTS.XP_PER_HARVEST
+
+    // Track max combo
+    if (state.comboCount > state.stats.maxComboCount) {
+      state.stats.maxComboCount = state.comboCount
+    }
+
     checkLevelUp()
+    checkNewAchievements()
     saveState(state)
     refreshPhaser()
 
@@ -249,6 +274,35 @@ function checkLevelUp(): void {
         showToast(`Unlocked: ${f.name}!`)
       }
     }
+  }
+}
+
+function checkNewAchievements(): void {
+  const newIds = checkAchievements(state)
+  for (const id of newIds) {
+    const reward = claimAchievement(state, id)
+    if (reward > 0) {
+      const ach = ACHIEVEMENTS.find(a => a.id === id)
+      showToast(`${ach?.icon} ${ach?.name}! +${reward} coins`)
+    }
+  }
+}
+
+function handleBuyDecoration(decoId: string): void {
+  if (buyDecoration(state, decoId)) {
+    const deco = getAvailableDecorations(state.level, state.decorations).find(d => d.id === decoId)
+      || DECORATIONS.find(d => d.id === decoId)
+    showToast(`Bought ${deco?.name}!`)
+    checkNewAchievements()
+    saveState(state)
+  }
+}
+
+function handleClaimChallenge(): void {
+  const reward = claimChallengeReward(state)
+  if (reward > 0) {
+    showToast(`💰 +${reward} coins!`)
+    saveState(state)
   }
 }
 
@@ -375,9 +429,23 @@ onUnmounted(() => {
             </div>
           </div>
           <div class="hud-right">
+            <button class="btn-icon" @click="screen = 'achievements'">🏆</button>
             <button class="btn-icon" @click="screen = 'settings'">⚙️</button>
             <button class="btn-icon" @click="goToMenu">☰</button>
           </div>
+        </div>
+
+        <!-- Daily Challenge Banner -->
+        <div v-if="state.dailyChallenge" class="challenge-banner" :class="{ complete: challengeComplete }">
+          <span class="cb-icon">{{ challengeComplete ? '✅' : '🎯' }}</span>
+          <span class="cb-text">
+            {{ t('challenge_' + state.dailyChallenge.templateId) || state.dailyChallenge.templateId }}
+            {{ challengeProgress.current }}/{{ challengeProgress.target }}
+          </span>
+          <button v-if="challengeComplete && !state.dailyChallenge.claimed"
+                  class="btn btn-sm btn-claim"
+                  @click="handleClaimChallenge">💰 {{ t('collect') }}</button>
+          <span v-if="state.dailyChallenge.claimed" class="cb-claimed">✓</span>
         </div>
       </div>
 
@@ -431,6 +499,29 @@ onUnmounted(() => {
                     @click="handleBuyUpgrade(upgrade.id)">
               {{ (state.upgrades[upgrade.id] || 0) >= upgrade.maxLevel ? t('maxLevel') : '💰 ' + formatCoins(getUpgradeCost(upgrade.id, state.upgrades[upgrade.id] || 0)) }}
             </button>
+          </div>
+        </div>
+
+        <!-- Decorations -->
+        <h3 class="section-title">🎨 Decorations</h3>
+        <div v-if="decoBonus.growth > 0 || decoBonus.price > 0" class="deco-bonus-bar">
+          <span v-if="decoBonus.growth > 0">🌱 +{{ (decoBonus.growth * 100).toFixed(0) }}% growth</span>
+          <span v-if="decoBonus.price > 0">💰 +{{ (decoBonus.price * 100).toFixed(0) }}% price</span>
+        </div>
+        <div class="shop-list">
+          <div v-for="deco in availableDecorations" :key="deco.id" class="shop-card">
+            <div class="sc-info">
+              <div class="sc-name">{{ deco.name }}</div>
+              <div class="sc-desc">{{ deco.description }}</div>
+            </div>
+            <button class="btn btn-sm"
+                    :disabled="state.coins < deco.cost"
+                    @click="handleBuyDecoration(deco.id)">
+              💰 {{ formatCoins(deco.cost) }}
+            </button>
+          </div>
+          <div v-if="availableDecorations.length === 0" class="sc-empty">
+            All decorations owned! 🎉
           </div>
         </div>
 
@@ -516,6 +607,35 @@ onUnmounted(() => {
         <!-- Reset -->
         <h3 class="section-title" style="margin-top: 24px;">⚠️ {{ t('resetProgress') }}</h3>
         <button class="btn btn-reset" @click="handleResetProgress">{{ t('resetProgress') }}</button>
+
+        <button class="btn btn-back" @click="screen = 'game'; nextTick(() => refreshPhaser())">{{ t('back') }}</button>
+      </div>
+    </div>
+
+    <!-- ACHIEVEMENTS OVERLAY -->
+    <div v-if="screen === 'achievements'" class="overlay-screen">
+      <div class="overlay-content">
+        <div class="overlay-header">
+          <h2>🏆 Achievements</h2>
+          <button class="btn-icon" @click="screen = 'game'; nextTick(() => refreshPhaser())">✕</button>
+        </div>
+
+        <div class="achievement-list">
+          <div v-for="ach in ACHIEVEMENTS" :key="ach.id"
+               class="achievement-card"
+               :class="{ unlocked: achievementProgress.find(p => p.id === ach.id)?.unlocked }">
+            <div class="ach-icon">{{ ach.icon }}</div>
+            <div class="ach-info">
+              <div class="ach-name">{{ ach.name }}</div>
+              <div class="ach-desc">{{ ach.description }}</div>
+            </div>
+            <div class="ach-status">
+              <span v-if="state.achievements.includes(ach.id)" class="ach-claimed">✅</span>
+              <span v-else-if="achievementProgress.find(p => p.id === ach.id)?.claimable" class="ach-claimable">🎁</span>
+              <span v-else class="ach-locked">🔒</span>
+            </div>
+          </div>
+        </div>
 
         <button class="btn btn-back" @click="screen = 'game'; nextTick(() => refreshPhaser())">{{ t('back') }}</button>
       </div>
@@ -764,6 +884,52 @@ onUnmounted(() => {
 
 .overlay-content::-webkit-scrollbar { width: 4px; }
 .overlay-content::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 2px; }
+
+/* DAILY CHALLENGE BANNER */
+.challenge-banner {
+  display: flex; align-items: center; gap: 8px;
+  padding: 6px 12px; margin: 4px 8px;
+  background: rgba(255,215,64,0.12); border: 1px solid rgba(255,215,64,0.25);
+  border-radius: 8px; font-size: 12px;
+}
+.challenge-banner.complete { background: rgba(76,175,80,0.15); border-color: rgba(76,175,80,0.3); }
+.cb-icon { font-size: 14px; }
+.cb-text { flex: 1; font-family: 'Nunito', sans-serif; color: rgba(255,255,255,0.85); }
+.cb-claimed { color: #81C784; font-weight: bold; }
+.btn-claim {
+  background: rgba(76,175,80,0.3); color: #81C784;
+  border: 1px solid rgba(76,175,80,0.4); padding: 4px 10px; font-size: 11px;
+}
+
+/* DECORATIONS */
+.deco-bonus-bar {
+  display: flex; gap: 16px; padding: 6px 12px;
+  background: rgba(255,215,64,0.08); border-radius: 8px;
+  font-size: 12px; color: var(--gold); margin-bottom: 8px;
+  font-family: 'Fredoka One', cursive;
+}
+.sc-empty {
+  text-align: center; padding: 16px; color: rgba(255,255,255,0.4);
+  font-size: 13px;
+}
+
+/* ACHIEVEMENTS */
+.achievement-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
+.achievement-card {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 12px; background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.06); border-radius: 10px;
+  opacity: 0.6;
+}
+.achievement-card.unlocked { opacity: 1; background: rgba(255,215,64,0.06); border-color: rgba(255,215,64,0.15); }
+.ach-icon { font-size: 24px; min-width: 32px; text-align: center; }
+.ach-info { flex: 1; }
+.ach-name { font-family: 'Fredoka One', cursive; font-size: 13px; }
+.ach-desc { font-size: 11px; color: rgba(255,255,255,0.5); }
+.ach-status { font-size: 16px; min-width: 24px; text-align: center; }
+.ach-claimed { }
+.ach-claimable { animation: glow-pulse 1.5s ease-in-out infinite; }
+.ach-locked { opacity: 0.3; }
 
 @media (max-width: 600px) {
   .title-main { font-size: 32px; letter-spacing: 2px; }
