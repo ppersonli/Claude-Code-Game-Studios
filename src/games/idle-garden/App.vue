@@ -10,6 +10,7 @@ import { getUpgradeById, getUpgradeCost, canUpgrade, UPGRADES } from './data/upg
 import { CONSTANTS, calcXpRequired, calcPotsForLevel } from './data/constants'
 import { translations, getLocale, t as translate, type Locale } from './i18n/translations'
 import { GameScene } from './phaser/scenes/GameScene'
+import { BootScene } from './phaser/scenes/BootScene'
 import type { GameSceneData } from './phaser/scenes/GameScene'
 import type { GameState } from './data/types'
 import { AdManager } from '../../services/AdManager'
@@ -97,7 +98,7 @@ function initPhaser(): void {
       mode: Phaser.Scale.FIT,
       autoCenter: Phaser.Scale.CENTER_BOTH,
     },
-    scene: [],
+    scene: [BootScene, GameScene],
   })
 
   const sceneData: GameSceneData = {
@@ -116,7 +117,7 @@ function initPhaser(): void {
     },
   }
 
-  phaserGame.scene.add('GameScene', GameScene, true, sceneData)
+  phaserGame.scene.start('BootScene', sceneData)
 }
 
 function destroyPhaser(): void {

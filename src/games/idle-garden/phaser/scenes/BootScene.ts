@@ -1,13 +1,21 @@
 /**
  * Idle Garden Tycoon — Boot Scene
  * Loads all game assets and shows a loading bar.
+ * Receives GameSceneData via init() and passes it to GameScene.
  */
 import Phaser from 'phaser'
 import { GAME_WIDTH, GAME_HEIGHT, COLORS } from '../config'
+import type { GameSceneData } from './GameScene'
 
 export class BootScene extends Phaser.Scene {
+  private sceneData!: GameSceneData
+
   constructor() {
     super({ key: 'BootScene' })
+  }
+
+  init(data: GameSceneData): void {
+    this.sceneData = data
   }
 
   preload(): void {
@@ -52,6 +60,6 @@ export class BootScene extends Phaser.Scene {
   }
 
   create(): void {
-    this.scene.start('GameScene')
+    this.scene.start('GameScene', this.sceneData)
   }
 }
