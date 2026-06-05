@@ -40,11 +40,13 @@ export class BootScene extends Phaser.Scene {
 
     // Load game assets
     const base = import.meta.env.BASE_URL || './'
-    this.load.image('bg-menu', `${base}assets/idle-garden/bg-menu.webp`)
     this.load.image('bg-game', `${base}assets/idle-garden/bg-game.webp`)
     this.load.image('flower-sunflower', `${base}assets/idle-garden/flower-sunflower.webp`)
     this.load.image('flower-tulip', `${base}assets/idle-garden/flower-tulip.webp`)
     this.load.image('flower-rose', `${base}assets/idle-garden/flower-rose.webp`)
+    this.load.image('flower-peony', `${base}assets/idle-garden/flower-peony.webp`)
+    this.load.image('flower-orchid', `${base}assets/idle-garden/flower-orchid.webp`)
+    this.load.image('flower-rainbow', `${base}assets/idle-garden/flower-rainbow.webp`)
     this.load.image('pot-empty', `${base}assets/idle-garden/pot-empty.webp`)
     this.load.image('coin', `${base}assets/idle-garden/coin.webp`)
   }
