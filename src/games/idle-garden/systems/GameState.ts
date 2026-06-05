@@ -116,7 +116,8 @@ export function trackPlayTime(state: GameState, deltaMs: number): void {
  * Update isReady flags for all pots based on current time.
  */
 export function updateGrowthStates(state: GameState, now: number): void {
-  const growthMult = 1 + state.spGrowthUpgrades * CONSTANTS.SP_GROWTH_BOOST
+  const growthSpeedLevel = state.upgrades['growth-speed'] || 0
+  const growthMult = 1 + state.spGrowthUpgrades * CONSTANTS.SP_GROWTH_BOOST + growthSpeedLevel * CONSTANTS.GROWTH_SPEED_PER_LEVEL
 
   for (const pot of state.pots) {
     if (pot.flowerId && !pot.isReady) {

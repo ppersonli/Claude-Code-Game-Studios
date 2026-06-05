@@ -1,12 +1,12 @@
 /**
  * Idle Garden Tycoon — Game Scene
- * Renders the garden with pots, flowers, growth animations, and harvest effects.
+ * Renders the garden with pot sprites, flower sprites, growth animations, and harvest effects.
  * Receives state and callbacks from Vue via scene data.
  */
 import Phaser from 'phaser'
 import { GAME_WIDTH, GAME_HEIGHT, COLORS, POT_LAYOUT } from '../config'
 import { getFlowerById } from '../../data/flowers'
-import { calcGrowthProgress, calcPriceMultiplier, calcGrowthMultiplier, CONSTANTS } from '../../data/constants'
+import { calcGrowthProgress, CONSTANTS } from '../../data/constants'
 import type { GameState, PotState } from '../../data/types'
 
 export interface GameSceneData {
@@ -21,8 +21,9 @@ export class GameScene extends Phaser.Scene {
   private state!: GameState
   private sceneData!: GameSceneData
 
-  // Visual elements
-  private potGraphics: Phaser.GameObjects.Graphics[] = []
+  // Visual element groups (for cleanup on refresh)
+  private potSprites: Phaser.GameObjects.Image[] = []
+  private flowerSprites: Phaser.GameObjects.Image[] = []
   private flowerTexts: Phaser.GameObjects.Text[] = []
   private progressBars: Phaser.GameObjects.Graphics[] = []
   private potZones: Phaser.GameObjects.Zone[] = []
@@ -43,56 +44,38 @@ export class GameScene extends Phaser.Scene {
   }
 
   create(): void {
-    this.drawBackground()
+    // Background image
+    this.add.image(GAME_WIDTH / 2, GAME_HEIGHT / 2, 'bg-game')
+      .setDisplaySize(GAME_WIDTH, GAME_HEIGHT)
+
     this.drawGarden()
     this.drawSeedSelector()
-  }
-
-  private drawBackground(): void {
-    // Sky gradient
-    const sky = this.add.graphics()
-    sky.fillGradientStyle(0x87CEEB, 0x87CEEB, 0x98FB98, 0x98FB98, 1)
-    sky.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT)
-
-    // Ground
-    const ground = this.add.graphics()
-    ground.fillStyle(0x4CAF50, 1)
-    ground.fillRect(0, GAME_HEIGHT * 0.35, GAME_WIDTH, GAME_HEIGHT * 0.65)
-
-    // Grass tufts
-    for (let i = 0; i < 15; i++) {
-      const x = Phaser.Math.Between(20, GAME_WIDTH - 20)
-      const y = Phaser.Math.Between(GAME_HEIGHT * 0.35, GAME_HEIGHT - 30)
-      const grass = this.add.graphics()
-      grass.fillStyle(0x66BB6A, 0.6)
-      grass.fillEllipse(x, y, 12, 6)
-    }
-
-    // Sun
-    const sun = this.add.graphics()
-    sun.fillStyle(0xFFD740, 1)
-    sun.fillCircle(GAME_WIDTH - 60, 60, 35)
-    sun.fillStyle(0xFFE082, 0.5)
-    sun.fillCircle(GAME_WIDTH - 60, 60, 45)
   }
 
   private drawGarden(): void {
     this.state = this.sceneData.getState()
 
     // Clear old elements
-    this.potGraphics.forEach(g => g.destroy())
+    this.potSprites.forEach(s => s.destroy())
+    this.flowerSprites.forEach(s => s.destroy())
     this.flowerTexts.forEach(t => t.destroy())
     this.progressBars.forEach(g => g.destroy())
     this.potZones.forEach(z => z.destroy())
     this.readyIndicators.forEach(t => t.destroy())
-    this.potGraphics = []
+    this.potSprites = []
+    this.flowerSprites = []
     this.flowerTexts = []
     this.progressBars = []
     this.potZones = []
     this.readyIndicators = []
 
     const { startX, startY, spacingX, spacingY, potsPerRow, potWidth, potHeight } = POT_LAYOUT
-    const growthMult = calcGrowthMultiplier(this.state.spGrowthUpgrades)
+
+    // Include growth-speed upgrade in multiplier
+    const growthSpeedLevel = this.state.upgrades['growth-speed'] || 0
+    const growthMult = 1
+      + this.state.spGrowthUpgrades * CONSTANTS.SP_GROWTH_BOOST
+      + growthSpeedLevel * CONSTANTS.GROWTH_SPEED_PER_LEVEL
 
     this.state.pots.forEach((pot, i) => {
       const col = i % potsPerRow
@@ -100,10 +83,10 @@ export class GameScene extends Phaser.Scene {
       const x = startX + col * spacingX
       const y = startY + row * spacingY
 
-      // Draw pot
-      const potGfx = this.add.graphics()
-      this.drawPot(potGfx, x, y, potWidth, potHeight, pot)
-      this.potGraphics.push(potGfx)
+      // Pot sprite
+      const potSprite = this.add.image(x, y, 'pot-empty')
+        .setDisplaySize(potWidth, potHeight)
+      this.potSprites.push(potSprite)
 
       if (pot.flowerId) {
         const flower = getFlowerById(pot.flowerId)
@@ -115,21 +98,42 @@ export class GameScene extends Phaser.Scene {
             growthMult,
           )
 
-          // Flower name/status
-          const statusText = pot.isReady
-            ? `${flower.name} ✓`
-            : `${Math.floor(progress * 100)}%`
-          const status = this.add.text(x, y - potHeight / 2 - 12, statusText, {
-            fontFamily: 'Fredoka One, cursive',
-            fontSize: '12px',
-            color: pot.isReady ? COLORS.accent : '#FFFFFF',
-            stroke: '#000000',
-            strokeThickness: 2,
-          }).setOrigin(0.5)
-          this.flowerTexts.push(status)
+          // Flower sprite above pot
+          const flowerSprite = this.add.image(x, y - potHeight / 2 - 10, flower.img)
+            .setDisplaySize(potWidth - 10, potWidth - 10)
+          this.flowerSprites.push(flowerSprite)
 
-          // Progress bar
-          if (!pot.isReady) {
+          if (pot.isReady) {
+            // Ready indicator — bounce the flower sprite
+            this.tweens.add({
+              targets: flowerSprite,
+              y: flowerSprite.y - 6,
+              duration: 500,
+              ease: 'Sine.easeInOut',
+              yoyo: true,
+              repeat: -1,
+            })
+
+            const ready = this.add.text(x, y - potHeight / 2 - 38, `${flower.name} ✓`, {
+              fontFamily: 'Fredoka One, cursive',
+              fontSize: '12px',
+              color: COLORS.accent,
+              stroke: '#000000',
+              strokeThickness: 2,
+            }).setOrigin(0.5)
+            this.readyIndicators.push(ready)
+          } else {
+            // Growth percentage label
+            const status = this.add.text(x, y - potHeight / 2 - 30, `${Math.floor(progress * 100)}%`, {
+              fontFamily: 'Fredoka One, cursive',
+              fontSize: '12px',
+              color: '#FFFFFF',
+              stroke: '#000000',
+              strokeThickness: 2,
+            }).setOrigin(0.5)
+            this.flowerTexts.push(status)
+
+            // Progress bar
             const barGfx = this.add.graphics()
             const barW = potWidth - 10
             const barH = 6
@@ -140,30 +144,14 @@ export class GameScene extends Phaser.Scene {
             barGfx.fillStyle(pot.isWatered ? 0x42A5F5 : 0x66BB6A, 1)
             barGfx.fillRoundedRect(barX, barY, barW * progress, barH, 3)
             this.progressBars.push(barGfx)
-          }
 
-          // Ready indicator (bounce animation)
-          if (pot.isReady) {
-            const ready = this.add.text(x, y - potHeight / 2 - 28, '🌸', {
-              fontSize: '20px',
-            }).setOrigin(0.5)
-            this.tweens.add({
-              targets: ready,
-              y: ready.y - 6,
-              duration: 500,
-              ease: 'Sine.easeInOut',
-              yoyo: true,
-              repeat: -1,
-            })
-            this.readyIndicators.push(ready)
-          }
-
-          // Watered indicator
-          if (pot.isWatered && !pot.isReady) {
-            const drop = this.add.text(x + potWidth / 2 - 8, y - potHeight / 2, '💧', {
-              fontSize: '12px',
-            }).setOrigin(0.5)
-            this.flowerTexts.push(drop)
+            // Watered indicator
+            if (pot.isWatered) {
+              const drop = this.add.text(x + potWidth / 2 - 8, y - potHeight / 2, '💧', {
+                fontSize: '12px',
+              }).setOrigin(0.5)
+              this.flowerTexts.push(drop)
+            }
           }
         }
       } else {
@@ -181,46 +169,6 @@ export class GameScene extends Phaser.Scene {
       zone.on('pointerdown', () => this.handlePotClick(pot))
       this.potZones.push(zone)
     })
-  }
-
-  private drawPot(
-    gfx: Phaser.GameObjects.Graphics,
-    x: number,
-    y: number,
-    w: number,
-    h: number,
-    pot: PotState,
-  ): void {
-    const halfW = w / 2
-    const halfH = h / 2
-
-    // Pot body (trapezoid)
-    gfx.fillStyle(0xD2691E, 1)
-    gfx.beginPath()
-    gfx.moveTo(x - halfW, y - halfH + 10)
-    gfx.lineTo(x + halfW, y - halfH + 10)
-    gfx.lineTo(x + halfW - 8, y + halfH)
-    gfx.lineTo(x - halfW + 8, y + halfH)
-    gfx.closePath()
-    gfx.fillPath()
-
-    // Pot rim
-    gfx.fillStyle(0xA0522D, 1)
-    gfx.fillRoundedRect(x - halfW - 4, y - halfH, w + 8, 14, 4)
-
-    // Soil
-    gfx.fillStyle(0x5D4037, 1)
-    gfx.fillRoundedRect(x - halfW + 4, y - halfH + 6, w - 8, 18, 4)
-
-    // Highlight
-    gfx.fillStyle(0xE8A065, 0.3)
-    gfx.fillRect(x - halfW + 6, y - halfH + 16, 8, h - 30)
-
-    // Glow if ready
-    if (pot.isReady) {
-      gfx.lineStyle(3, 0xFFD740, 0.7)
-      gfx.strokeRoundedRect(x - halfW - 6, y - halfH - 4, w + 12, h + 8, 8)
-    }
   }
 
   private drawSeedSelector(): void {
@@ -284,18 +232,23 @@ export class GameScene extends Phaser.Scene {
       btn.fillRoundedRect(btnX, btnY, btnW, btnH, 10)
       container.add(btn)
 
-      const label = this.add.text(btnX + btnW / 2, btnY + 16, flower.name, {
+      // Flower icon in seed selector
+      const icon = this.add.image(btnX + 24, btnY + btnH / 2, flower.img)
+        .setDisplaySize(32, 32)
+      container.add(icon)
+
+      const label = this.add.text(btnX + 50, btnY + 16, flower.name, {
         fontFamily: 'Fredoka One, cursive',
         fontSize: '14px',
         color: canAfford ? '#FFFFFF' : '#999999',
-      }).setOrigin(0.5)
+      }).setOrigin(0, 0.5)
       container.add(label)
 
-      const costText = this.add.text(btnX + btnW / 2, btnY + 36, `💰 ${flower.seedCost}  ⏱ ${flower.growTime}s`, {
+      const costText = this.add.text(btnX + 50, btnY + 36, `💰 ${flower.seedCost}  ⏱ ${flower.growTime}s`, {
         fontFamily: 'Nunito, sans-serif',
         fontSize: '11px',
         color: canAfford ? COLORS.accent : '#777777',
-      }).setOrigin(0.5)
+      }).setOrigin(0, 0.5)
       container.add(costText)
 
       if (canAfford) {
@@ -330,15 +283,12 @@ export class GameScene extends Phaser.Scene {
     if (this.seedSelectorVisible) return
 
     if (pot.isReady && pot.flowerId) {
-      // Harvest
       this.spawnHarvestEffect(pot)
       this.sceneData.onHarvestPot(pot.id)
       this.time.delayedCall(100, () => this.refresh())
     } else if (!pot.flowerId) {
-      // Show seed selector
       this.showSeedSelector(pot.id)
     } else if (!pot.isWatered && pot.flowerId) {
-      // Water
       this.sceneData.onWaterPot(pot.id)
       this.refresh()
     }
@@ -385,16 +335,10 @@ export class GameScene extends Phaser.Scene {
     })
   }
 
-  /**
-   * Called by Vue to refresh the scene after state changes.
-   */
   refresh(): void {
     this.drawGarden()
   }
 
-  /**
-   * Spawn a floating coin particle at a position (called from Vue).
-   */
   spawnCoinParticle(x: number, y: number, amount: number): void {
     const text = this.add.text(x, y, `+${amount}`, {
       fontFamily: 'Fredoka One, cursive',

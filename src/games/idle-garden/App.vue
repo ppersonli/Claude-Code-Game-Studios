@@ -3,7 +3,7 @@ import { ref, reactive, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import Phaser from 'phaser'
 import { loadState, saveState, resetState, calculateOfflineEarnings, trackPlayTime, updateGrowthStates } from './systems/GameState'
 import { addCoins, spendCoins, canAfford, calcIncomePerSecond } from './systems/CurrencySystem'
-import { plantFlower, harvestPot, waterPot, createDefaultPots, addPots } from './systems/GardenSystem'
+import { plantFlower, harvestPot, waterPot, createDefaultPots, addPots, autoWaterPots } from './systems/GardenSystem'
 import { canPrestige, performPrestige, buySunPointUpgrade, getPrestigeRequirement, calcEarnableSunPoints, getGrowthBonusPercent, getPriceBonusPercent } from './systems/PrestigeSystem'
 import { getFlowerById, getAvailableFlowers } from './data/flowers'
 import { getUpgradeById, getUpgradeCost, canUpgrade, UPGRADES } from './data/upgrades'
@@ -12,9 +12,11 @@ import { translations, getLocale, t as translate, type Locale } from './i18n/tra
 import { GameScene } from './phaser/scenes/GameScene'
 import type { GameSceneData } from './phaser/scenes/GameScene'
 import type { GameState } from './data/types'
+import { AdManager } from '../../services/AdManager'
 
 // i18n
-const locale = ref<Locale>(getLocale())
+const savedLocale = typeof localStorage !== 'undefined' ? localStorage.getItem('idle-garden-locale') : null
+const locale = ref<Locale>(getLocale(savedLocale || navigator.language))
 const t = (key: string) => translate(key, locale.value)
 
 // Game state
@@ -27,6 +29,9 @@ const showOfflineReward = ref(false)
 const offlineRewardAmount = ref(0)
 const toastMessage = ref('')
 let toastTimer: ReturnType<typeof setTimeout> | null = null
+const adManager = AdManager.getInstance()
+const HARVEST_INTERSTITIAL_INTERVAL = 5
+let harvestSinceLastAd = 0
 
 // Phaser
 let phaserGame: Phaser.Game | null = null
@@ -35,6 +40,12 @@ const phaserContainer = ref<HTMLDivElement>()
 // Timers
 let tickTimer: ReturnType<typeof setInterval> | null = null
 let autoSaveTimer: ReturnType<typeof setInterval> | null = null
+
+// Ad callbacks — pause/resume game during ads
+adManager.setAdCallbacks(
+  () => { stopGameLoop() },
+  () => { if (screen.value === 'game') startGameLoop() },
+)
 
 // Computed
 const availableFlowers = computed(() => getAvailableFlowers(state.level, state.prestigeLevel))
@@ -105,6 +116,8 @@ function destroyPhaser(): void {
 function startGame(): void {
   screen.value = 'game'
 
+  adManager.gameplayStart()
+
   // Check offline earnings
   const offline = calculateOfflineEarnings(state)
   if (offline > 0) {
@@ -132,6 +145,9 @@ function startGameLoop(): void {
         }
       }
     }
+
+    // Auto-water (after harvest clears pots, water remaining)
+    autoWaterPots(state)
 
     saveState(state)
     refreshPhaser()
@@ -161,6 +177,13 @@ function handleHarvest(potId: number): void {
     checkLevelUp()
     saveState(state)
     refreshPhaser()
+
+    // Show interstitial ad every N harvests
+    harvestSinceLastAd++
+    if (harvestSinceLastAd >= HARVEST_INTERSTITIAL_INTERVAL) {
+      harvestSinceLastAd = 0
+      adManager.requestMidgameAd()
+    }
   }
 }
 
@@ -239,11 +262,38 @@ function collectOfflineReward(): void {
   showOfflineReward.value = false
 }
 
+async function watchAdFor2x(): Promise<void> {
+  const rewarded = await adManager.requestRewardedAd()
+  if (rewarded) {
+    const bonus = Math.floor(offlineRewardAmount.value)
+    addCoins(state, bonus)
+    showToast(`💰 +${formatCoins(bonus)} (2x Bonus!)`)
+    saveState(state)
+  }
+  showOfflineReward.value = false
+}
+
 function goToMenu(): void {
   screen.value = 'menu'
   stopGameLoop()
   destroyPhaser()
   saveState(state)
+  adManager.gameplayStop()
+}
+
+function handleResetProgress(): void {
+  if (!window.confirm(t('resetConfirm'))) return
+  const fresh = resetState()
+  Object.assign(state, fresh)
+  saveState(state)
+  showToast(t('settings') + ' ✓')
+}
+
+function handleChangeLocale(newLocale: Locale): void {
+  locale.value = newLocale
+  if (typeof localStorage !== 'undefined') {
+    localStorage.setItem('idle-garden-locale', newLocale)
+  }
 }
 
 function formatCoins(n: number): string {
@@ -325,6 +375,7 @@ onUnmounted(() => {
             </div>
           </div>
           <div class="hud-right">
+            <button class="btn-icon" @click="screen = 'settings'">⚙️</button>
             <button class="btn-icon" @click="goToMenu">☰</button>
           </div>
         </div>
@@ -442,6 +493,34 @@ onUnmounted(() => {
       </div>
     </div>
 
+    <!-- SETTINGS OVERLAY -->
+    <div v-if="screen === 'settings'" class="overlay-screen">
+      <div class="overlay-content">
+        <div class="overlay-header">
+          <h2>⚙️ {{ t('settings') }}</h2>
+          <button class="btn-icon" @click="screen = 'game'; nextTick(() => refreshPhaser())">✕</button>
+        </div>
+
+        <!-- Language -->
+        <h3 class="section-title">🌐 {{ t('language') }}</h3>
+        <div class="lang-grid">
+          <button v-for="loc in (['en','pt','es','id','tr','ru'] as Locale[])"
+                  :key="loc"
+                  class="btn btn-lang"
+                  :class="{ active: locale === loc }"
+                  @click="handleChangeLocale(loc)">
+            {{ { en: 'English', pt: 'Português', es: 'Español', id: 'Bahasa', tr: 'Türkçe', ru: 'Русский' }[loc] }}
+          </button>
+        </div>
+
+        <!-- Reset -->
+        <h3 class="section-title" style="margin-top: 24px;">⚠️ {{ t('resetProgress') }}</h3>
+        <button class="btn btn-reset" @click="handleResetProgress">{{ t('resetProgress') }}</button>
+
+        <button class="btn btn-back" @click="screen = 'game'; nextTick(() => refreshPhaser())">{{ t('back') }}</button>
+      </div>
+    </div>
+
     <!-- Toast -->
     <Transition name="toast">
       <div v-if="toastMessage" class="toast">{{ toastMessage }}</div>
@@ -453,7 +532,10 @@ onUnmounted(() => {
         <h2>{{ t('welcomeBack') }}</h2>
         <p>{{ t('offlineEarned') }}</p>
         <div class="reward-amount">💰 {{ formatCoins(offlineRewardAmount) }}</div>
-        <button class="btn btn-play" @click="collectOfflineReward">{{ t('collect') }}</button>
+        <div class="popup-buttons">
+          <button class="btn btn-play" @click="collectOfflineReward">{{ t('collect') }}</button>
+          <button class="btn btn-ad" @click="watchAdFor2x">🎬 {{ t('watchAdFor2x') }}</button>
+        </div>
       </div>
     </div>
   </div>
@@ -634,6 +716,23 @@ onUnmounted(() => {
 .sp-upgrades { display: flex; gap: 8px; margin-bottom: 16px; }
 .prestige-preview { font-family: 'Fredoka One', cursive; font-size: 22px; color: var(--gold); margin-bottom: 12px; }
 
+/* SETTINGS */
+.lang-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.btn-lang {
+  background: rgba(255,255,255,0.06); color: #ccc;
+  border: 1px solid rgba(255,255,255,0.1); padding: 10px 12px;
+  font-family: 'Nunito', sans-serif; font-size: 14px;
+}
+.btn-lang.active {
+  background: rgba(76,175,80,0.2); color: #81C784;
+  border-color: #4CAF50; box-shadow: inset 0 0 0 1px #4CAF50;
+}
+.btn-reset {
+  background: rgba(231,76,60,0.15); color: #E74C3C;
+  border: 1px solid rgba(231,76,60,0.3); width: 100%; margin-top: 8px;
+}
+.btn-reset:hover { background: rgba(231,76,60,0.25); }
+
 /* TOAST */
 .toast {
   position: fixed; top: 15%; left: 50%; transform: translateX(-50%);
@@ -653,6 +752,15 @@ onUnmounted(() => {
 .popup h2 { font-family: 'Fredoka One', cursive; color: var(--gold); margin-bottom: 8px; }
 .popup p { color: rgba(255,255,255,0.7); margin-bottom: 8px; }
 .reward-amount { font-family: 'Fredoka One', cursive; font-size: 28px; color: var(--gold); margin: 16px 0 20px; }
+.popup-buttons { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+.btn-ad {
+  background: linear-gradient(135deg, #FF6B9D, #FF8A65); color: #fff;
+  border: none; border-radius: var(--radius); padding: 10px 20px;
+  font-family: 'Fredoka One', cursive; font-size: 14px;
+  cursor: pointer; transition: all 0.2s ease; min-height: 44px;
+  box-shadow: 0 4px 12px rgba(255,107,157,0.3);
+}
+.btn-ad:hover { transform: translateY(-2px) scale(1.03); }
 
 .overlay-content::-webkit-scrollbar { width: 4px; }
 .overlay-content::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 2px; }

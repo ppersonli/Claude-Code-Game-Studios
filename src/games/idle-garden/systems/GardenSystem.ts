@@ -167,3 +167,22 @@ export function getAutoHarvestYield(state: GameState): number {
 
   return total
 }
+
+/**
+ * Auto-water all pots that have flowers and are not yet watered.
+ * Requires auto-water upgrade level > 0.
+ * Returns the number of pots watered.
+ */
+export function autoWaterPots(state: GameState): number {
+  const autoWaterLevel = state.upgrades['auto-water'] || 0
+  if (autoWaterLevel <= 0) return 0
+
+  let count = 0
+  for (const pot of state.pots) {
+    if (pot.flowerId && !pot.isWatered) {
+      pot.isWatered = true
+      count++
+    }
+  }
+  return count
+}

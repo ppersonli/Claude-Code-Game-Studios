@@ -59,6 +59,9 @@ export const CONSTANTS = {
 
   /** Max sun point upgrades */
   SP_MAX_UPGRADES: 50,
+
+  /** Growth speed boost per growth-speed upgrade level (10%) */
+  GROWTH_SPEED_PER_LEVEL: 0.1,
 } as const
 
 /* ── Pure Math Functions ────────────────────────────────────────── */

@@ -88,6 +88,11 @@ export const translations: Record<Locale, Record<string, string>> = {
     totalHarvests: 'Total Harvests',
     playTime: 'Play Time',
     prestigeCount: 'Prestige Count',
+
+    // Settings
+    language: 'Language',
+    resetProgress: 'Reset Progress',
+    resetConfirm: 'Are you sure? This will erase all your progress!',
   },
 
   pt: {
@@ -149,6 +154,9 @@ export const translations: Record<Locale, Record<string, string>> = {
     totalHarvests: 'Total de Colheitas',
     playTime: 'Tempo de Jogo',
     prestigeCount: 'Contagem de Prestígio',
+    language: 'Idioma',
+    resetProgress: 'Redefinir Progresso',
+    resetConfirm: 'Tem certeza? Isso apagará todo o seu progresso!',
   },
 
   es: {
@@ -210,6 +218,9 @@ export const translations: Record<Locale, Record<string, string>> = {
     totalHarvests: 'Total de Cosechas',
     playTime: 'Tiempo de Juego',
     prestigeCount: 'Conteo de Prestigio',
+    language: 'Idioma',
+    resetProgress: 'Restablecer Progreso',
+    resetConfirm: '¿Estás seguro? ¡Esto borrará todo tu progreso!',
   },
 
   id: {
@@ -271,6 +282,9 @@ export const translations: Record<Locale, Record<string, string>> = {
     totalHarvests: 'Total Panen',
     playTime: 'Waktu Bermain',
     prestigeCount: 'Jumlah Prestise',
+    language: 'Bahasa',
+    resetProgress: 'Atur Ulang Progres',
+    resetConfirm: 'Apakah Anda yakin? Ini akan menghapus semua progres Anda!',
   },
 
   tr: {
@@ -332,6 +346,9 @@ export const translations: Record<Locale, Record<string, string>> = {
     totalHarvests: 'Toplam Hasat',
     playTime: 'Oyun Süresi',
     prestigeCount: 'Prestij Sayısı',
+    language: 'Dil',
+    resetProgress: 'İlerlemeyi Sıfırla',
+    resetConfirm: 'Emin misiniz? Bu tüm ilerlemenizi silecek!',
   },
 
   ru: {
@@ -393,6 +410,9 @@ export const translations: Record<Locale, Record<string, string>> = {
     totalHarvests: 'Всего Сборов',
     playTime: 'Время Игры',
     prestigeCount: 'Количество Престижей',
+    language: 'Язык',
+    resetProgress: 'Сбросить Прогресс',
+    resetConfirm: 'Вы уверены? Это удалит весь ваш прогресс!',
   },
 }
 
