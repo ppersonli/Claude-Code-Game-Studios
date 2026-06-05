@@ -13,6 +13,7 @@ export default {
     themes: '🎨 Themen',
     recipe: '📖 Rezepte',
     decor: '🏪 Deko',
+    expedition: '🗺️ Expedition',
     serve: 'Servieren 🧋',
     reset: 'Leeren',
     back: 'Zurück',
@@ -305,6 +306,12 @@ export default {
     dailyReward: '📅 Tägliche Belohnung +{amount}💰',
     doubleCoins: '🎬 Doppelte Münzen! +{amount}',
     achievement: '🏆 {name}!',
+    customerLeft: '💢 Kunde weg! Combo verloren, -10 Münzen',
+    luckyIngredient: 'Glückszutat',
+  },
+  
+  randomEvents: {
+    tip_storm: 'Trinkgeld-Sturm', time_freeze: 'Zeitstopp', double_order: 'Doppelbestellung', speed_rush: 'Speed Rush', lucky_ingredient: 'Glückszutat',
   },
   
   daily: {
@@ -323,4 +330,50 @@ export default {
   },
   
   language: 'Sprache',
+
+  expedition: {
+    title: 'Monster-Expedition',
+    dailyFirstBonus: 'Erste heute: Drops x2!',
+    startBattle: 'Kampf starten',
+    noStamina: 'Keine Ausdauer',
+    tapToAttack: 'TIPP TIPP TIPP! 👊',
+    expeditionComplete: 'Expedition abgeschlossen!',
+    monstersDefeated: 'Besiegt',
+    maxCombo: 'Max Combo',
+    totalDamage: 'Gesamtschaden',
+    dailyDropsDoubled: 'Heutige Drops verdoppelt!',
+    itemsObtained: 'Erhaltene Gegenstände',
+    noDrops: 'Diesmal keine Gegenstände...',
+    collect: 'Sammeln',
+    bestiary: 'Bestiarium',
+  },
+
+  zones: {
+    tea_garden: 'Teegarten',
+    ranch: 'Milchfarm',
+    candy_cave: 'Süßigkeitenhöhle',
+    orchard: 'Obstgarten',
+    ice_field: 'Eisfeld',
+    abyss: 'Der Abgrund',
+  },
+
+  monsters: {
+    tea_slime_green: 'Grüntee-Schleim',
+    tea_slime_black: 'Schwarztee-Schleim',
+    leaf_fairy: 'Blattfee',
+    milk_cloud: 'Milchwolke',
+    coconut_palm: 'Kokoskrabbe',
+    cream_sheep: 'Sahneschaf',
+    boba_bunny: 'Boba-Häschen',
+    jelly_fish: 'Geleequalle',
+    pudding_bear: 'Puddingbär',
+    strawberry_sprite: 'Erdbeerfee',
+    mango_monkey: 'Mango-Affe',
+    fruit_parrot: 'Fruchtpapagei',
+    ice_beast: 'Eisbestie',
+    snow_fox: 'Schneefuchs',
+    frost_dragon: 'Frostdrache',
+    taro_monster: 'Taro-Monster',
+    shadow_slime: 'Schattenschleim',
+  },
 }

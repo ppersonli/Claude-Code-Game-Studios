@@ -13,6 +13,7 @@ export default {
     themes: '🎨 테마',
     recipe: '📖 레시피',
     decor: '🏪 인테리어',
+    expedition: '🗺️ 탐험',
     serve: '서빙 🧋',
     reset: '비우기',
     back: '뒤로',
@@ -305,6 +306,12 @@ export default {
     dailyReward: '📅 일일 보상 +{amount}💰',
     doubleCoins: '🎬 2배 코인! +{amount}',
     achievement: '🏆 {name}!',
+    customerLeft: '💢 손님이 떠났어요! 콤보 초기화, -10코인',
+    luckyIngredient: '행운 재료',
+  },
+  
+  randomEvents: {
+    tip_storm: '팁 폭풍', time_freeze: '시간 정지', double_order: '더블 주문', speed_rush: '스피드 러시', lucky_ingredient: '행운 재료',
   },
   
   daily: {
@@ -323,4 +330,50 @@ export default {
   },
   
   language: '언어',
+
+  expedition: {
+    title: '몬스터 탐험',
+    dailyFirstBonus: '오늘 첫 탐험: 드랍 2배!',
+    startBattle: '전투 시작',
+    noStamina: '체력 부족',
+    tapToAttack: '탭탭탭! 👊',
+    expeditionComplete: '탐험 완료!',
+    monstersDefeated: '처치 수',
+    maxCombo: '최대 콤보',
+    totalDamage: '총 데미지',
+    dailyDropsDoubled: '오늘 드랍 2배!',
+    itemsObtained: '획득 아이템',
+    noDrops: '이번에는 아이템 없음...',
+    collect: '수집',
+    bestiary: '도감',
+  },
+
+  zones: {
+    tea_garden: '찻밭',
+    ranch: '목장',
+    candy_cave: '사탕 동굴',
+    orchard: '과수원',
+    ice_field: '빙원',
+    abyss: '심연',
+  },
+
+  monsters: {
+    tea_slime_green: '녹차 슬라임',
+    tea_slime_black: '홍차 슬라임',
+    leaf_fairy: '찻잎 요정',
+    milk_cloud: '우유 구름',
+    coconut_palm: '코코넛 게',
+    cream_sheep: '크림 양',
+    boba_bunny: '버블 토끼',
+    jelly_fish: '젤리 해파리',
+    pudding_bear: '푸딩 곰',
+    strawberry_sprite: '딸기 요정',
+    mango_monkey: '망고 원숭이',
+    fruit_parrot: '과일 앵무새',
+    ice_beast: '얼음 야수',
+    snow_fox: '눈 여우',
+    frost_dragon: '서리 용',
+    taro_monster: '타로 몬스터',
+    shadow_slime: '그림자 슬라임',
+  },
 }

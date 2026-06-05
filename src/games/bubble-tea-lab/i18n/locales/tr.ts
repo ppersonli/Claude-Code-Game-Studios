@@ -13,6 +13,7 @@ export default {
     themes: '🎨 Temalar',
     recipe: '📖 Tarifler',
     decor: '🏪 Dekorasyon',
+    expedition: '🗺️ Keşif',
     serve: 'Servis 🧋',
     reset: 'Boşalt',
     back: 'Geri',
@@ -305,6 +306,12 @@ export default {
     dailyReward: '📅 Günlük Ödül +{amount}💰',
     doubleCoins: '🎬 İki Katı Altın! +{amount}',
     achievement: '🏆 {name}!',
+    customerLeft: '💢 Müşteri gitti! Kombo sıfırlandı, -10 altın',
+    luckyIngredient: 'Şanslı Malzeme',
+  },
+  
+  randomEvents: {
+    tip_storm: 'Bahşiş Fırtınası', time_freeze: 'Zaman Dondurma', double_order: 'Çift Sipariş', speed_rush: 'Hız Koşusu', lucky_ingredient: 'Şanslı Malzeme',
   },
   
   daily: {
@@ -323,4 +330,50 @@ export default {
   },
   
   language: 'Dil',
+
+  expedition: {
+    title: 'Canavar Keşfi',
+    dailyFirstBonus: 'Günün ilk: ödüller x2!',
+    startBattle: 'Savaşa Başla',
+    noStamina: 'Enerji yok',
+    tapToAttack: 'TIKLA TIKLA TIKLA! 👊',
+    expeditionComplete: 'Keşif tamamlandı!',
+    monstersDefeated: 'Yenilen',
+    maxCombo: 'Maks Kombo',
+    totalDamage: 'Toplam Hasar',
+    dailyDropsDoubled: 'Günün ödülleri 2 kat!',
+    itemsObtained: 'Kazanılan Eşyalar',
+    noDrops: 'Bu sefer eşya yok...',
+    collect: 'Topla',
+    bestiary: 'Canavar Kitabı',
+  },
+
+  zones: {
+    tea_garden: 'Çay Bahçesi',
+    ranch: 'Süt Çiftliği',
+    candy_cave: 'Şeker Mağarası',
+    orchard: 'Meyve Bahçesi',
+    ice_field: 'Buz Alanı',
+    abyss: 'Uçurum',
+  },
+
+  monsters: {
+    tea_slime_green: 'Yeşil Çay Balçığı',
+    tea_slime_black: 'Siyah Çay Balçığı',
+    leaf_fairy: 'Yaprak Perisi',
+    milk_cloud: 'Süt Bulutu',
+    coconut_palm: 'Hindistan Yengeci',
+    cream_sheep: 'Krema Koyunu',
+    boba_bunny: 'Boba Tavşanı',
+    jelly_fish: 'Jöle Denizanası',
+    pudding_bear: 'Puding Ayısı',
+    strawberry_sprite: 'Çilek Ruhu',
+    mango_monkey: 'Mango Maymunu',
+    fruit_parrot: 'Meyve Papağanı',
+    ice_beast: 'Buz Canavarı',
+    snow_fox: 'Kar Tilkisi',
+    frost_dragon: 'Buz Ejderi',
+    taro_monster: 'Taro Canavarı',
+    shadow_slime: 'Gölge Balçığı',
+  },
 }

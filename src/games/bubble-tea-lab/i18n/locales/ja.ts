@@ -13,6 +13,7 @@ export default {
     themes: '🎨 テーマ',
     recipe: '📖 レシピ',
     decor: '🏪 内装',
+    expedition: '🗺️ 探検',
     serve: '提供する 🧋',
     reset: 'リセット',
     back: '戻る',
@@ -305,6 +306,13 @@ export default {
     dailyReward: '📅 デイリー報酬 +{amount}💰',
     doubleCoins: '🎬 2倍コイン! +{amount}',
     achievement: '🏆 {name}!',
+    customerLeft: '💢 客が帰った! コンボ消失、-10コイン',
+    luckyIngredient: 'ラッキー食材',
+  },
+  
+  // ランダムイベント
+  randomEvents: {
+    tip_storm: 'チップ嵐', time_freeze: '時間凍結', double_order: 'ダブル注文', speed_rush: 'スピードラッシュ', lucky_ingredient: 'ラッキー食材',
   },
   
   daily: {
@@ -323,4 +331,50 @@ export default {
   },
   
   language: '言語',
+
+  expedition: {
+    title: 'モンスター探検',
+    dailyFirstBonus: '本日の初回：ドロップ2倍！',
+    startBattle: '戦闘開始',
+    noStamina: 'スタミナ不足',
+    tapToAttack: 'タップタップタップ！👊',
+    expeditionComplete: '探検完了！',
+    monstersDefeated: '撃破数',
+    maxCombo: '最大コンボ',
+    totalDamage: '総ダメージ',
+    dailyDropsDoubled: '本日のドロップ2倍！',
+    itemsObtained: '獲得アイテム',
+    noDrops: '今回はアイテムなし...',
+    collect: '回収',
+    bestiary: '図鑑',
+  },
+
+  zones: {
+    tea_garden: '茶園',
+    ranch: '牧場',
+    candy_cave: 'キャンディ洞窟',
+    orchard: '果樹園',
+    ice_field: '氷原',
+    abyss: '深淵',
+  },
+
+  monsters: {
+    tea_slime_green: '緑茶スライム',
+    tea_slime_black: '紅茶スライム',
+    leaf_fairy: '茶葉の精',
+    milk_cloud: 'ミルク雲',
+    coconut_palm: 'ココナッツガニ',
+    cream_sheep: 'クリームシープ',
+    boba_bunny: 'タピオカうさぎ',
+    jelly_fish: 'ゼリークラゲ',
+    pudding_bear: 'プリンベア',
+    strawberry_sprite: 'いちごの精',
+    mango_monkey: 'マンゴーモンキー',
+    fruit_parrot: 'フルーツオウム',
+    ice_beast: '氷晶獣',
+    snow_fox: '雪狐',
+    frost_dragon: '霜竜',
+    taro_monster: 'タロモンスター',
+    shadow_slime: 'シャドウスライム',
+  },
 }

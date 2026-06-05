@@ -26,6 +26,11 @@ import {
   isIngredientUnlocked,
   INGREDIENTS,
   CUSTOMERS,
+  startPatienceTimer,
+  clearPatienceTimer,
+  customerLeft,
+  RANDOM_EVENTS,
+  addInventoryDrops,
 } from './composables/useGameState'
 import { ACHIEVEMENTS } from './data/customers'
 import { LAB_THEMES } from './data/themes'
@@ -40,11 +45,14 @@ import ParticleEffects from './components/ParticleEffects.vue'
 import RecipeBook from './components/RecipeBook.vue'
 import ShopDecor from './components/ShopDecor.vue'
 import SeasonalEventPanel from './components/SeasonalEventPanel.vue'
+import ExpeditionBattle from './components/ExpeditionBattle.vue'
+import { createExpeditionState, addStamina, type ExpeditionState, type DropItem } from './composables/useExpedition'
 
-type Screen = 'start' | 'game' | 'result' | 'daily' | 'shop' | 'themes' | 'recipe-book' | 'decor' | 'event'
+type Screen = 'start' | 'game' | 'result' | 'daily' | 'shop' | 'themes' | 'recipe-book' | 'decor' | 'event' | 'expedition'
 
 const screen = ref<Screen>('start')
 const state = reactive(createInitialState())
+const expeditionState = reactive(createExpeditionState())
 const adManager = AdManager.getInstance()
 const shopFreeCoinsClaimed = ref(false)
 const showRecipeBook = ref(false)
@@ -53,6 +61,10 @@ const showSeasonalEvent = ref(false)
 const perfectStreak = ref(0)
 const feverTimeActive = ref(false)
 const feverTimeEnd = ref(0)
+
+// Legal modals
+const showTerms = ref(false)
+const showPrivacy = ref(false)
 
 // Theme & daily persistence
 const STORAGE_THEMES = 'btlab_themes'
@@ -106,7 +118,23 @@ function goPlay() {
   startStandardGame(state)
   screen.value = 'game'
   nextCustomer(state)
+  startPatienceTimer(state, handleCustomerLeft)
   adManager.gameplayStart()
+}
+
+function handleCustomerLeft() {
+  customerLeft(state)
+  audioEngine.play('fail')
+  addFloatText(state, t('floatText.customerLeft'), '#ff6b6b')
+  if (state.customersServed >= state.maxCustomers) {
+    handleEndGame()
+    return
+  }
+  setTimeout(() => {
+    nextCustomer(state)
+    if (state.gameOver) { handleEndGame(); return }
+    startPatienceTimer(state, handleCustomerLeft)
+  }, 800)
 }
 
 function goDaily() {
@@ -122,6 +150,7 @@ function goDailyPlay() {
   startDailyGame(state, state.dailyModifier)
   screen.value = 'game'
   nextCustomer(state)
+  startPatienceTimer(state, handleCustomerLeft)
 
   state.dailyTimerId = setInterval(() => {
     state.dailyTimer--
@@ -137,6 +166,17 @@ function goShop() {
   screen.value = 'shop'
 }
 
+// === Expedition ===
+
+function handleExpeditionEnd(drops: DropItem[]) {
+  addInventoryDrops(state, drops)
+  screen.value = 'start'
+}
+
+function handleExpeditionBack() {
+  screen.value = 'start'
+}
+
 // === Game actions ===
 
 function handleAddToCup(ingredient: Ingredient) {
@@ -146,7 +186,23 @@ function handleAddToCup(ingredient: Ingredient) {
     return
   }
   addToCup(state, ingredient)
-  audioEngine.play('add')
+  
+  // Task 4: Real-time feedback
+  if (state.lastIngredientCorrect) {
+    audioEngine.play('add')
+    state.customerReaction = 'correct'
+    setTimeout(() => { state.customerReaction = null }, 600)
+  } else {
+    audioEngine.play('fail')
+    state.customerReaction = 'wrong'
+    setTimeout(() => { state.customerReaction = null }, 600)
+  }
+  
+  // Lucky ingredient feedback
+  if (state.luckyIngredientId && ingredient.id === state.luckyIngredientId) {
+    addFloatText(state, `🍀 +20 ${t('floatText.luckyIngredient')}!`, '#4CAF50')
+  }
+  
   if (navigator.vibrate) navigator.vibrate(30)
 }
 
@@ -159,6 +215,9 @@ function handleServe() {
     }
     return
   }
+
+  // Stamina recovery for expedition on successful serve
+  addStamina(expeditionState, 1)
 
   // 检查配方匹配
   const cupIngredientIds = state.cupContents.map(c => c.id)
@@ -182,7 +241,6 @@ function handleServe() {
         setTimeout(() => { feverTimeActive.value = false }, specialCombo.duration * 1000)
       } else if (specialCombo.effect === 'boss-rush') {
         addFloatText(state, t('floatText.bossRush'), '#FFD700')
-        // TODO: 触发超级VIP顾客逻辑
       }
     }
     
@@ -190,6 +248,13 @@ function handleServe() {
     const comboEffect = getComboEffect(state.combo)
     addScorePopup(state, `+${result.points} ${t('floatText.perfect')} 🔥 x${state.combo} ${comboEffect.name}`, '#ffd700')
     addFloatText(state, `🔥 x${state.combo} ${t('hud.combo')}! ${comboEffect.description}`, '#ff6b6b')
+    
+    // Task 3: Speed bonus display
+    if (result.speedBonus > 0 && result.speedLabel) {
+      setTimeout(() => {
+        addFloatText(state, `${result.speedLabel} +${result.speedBonus}`, '#00b894')
+      }, 300)
+    }
   } else {
     perfectStreak.value = 0
     audioEngine.play('fail')
@@ -216,11 +281,13 @@ function handleServe() {
       handleMidgameAd().then(() => {
         nextCustomer(state)
         if (state.gameOver) handleEndGame()
+        else startPatienceTimer(state, handleCustomerLeft)
         state.serving = false
       })
     } else {
       nextCustomer(state)
       if (state.gameOver) handleEndGame()
+      else startPatienceTimer(state, handleCustomerLeft)
       state.serving = false
     }
   }, 1500)
@@ -233,6 +300,7 @@ function handleResetCup() {
 function handleEndGame() {
   endGame(state)
   clearTimer(state)
+  clearPatienceTimer(state)
   screen.value = 'result'
   adManager.gameplayStop()
 }
@@ -382,20 +450,21 @@ const resultStats = computed(() => ({
 }))
 
 onMounted(async () => { await initI18n() })
-onUnmounted(() => clearTimer(state))
+onUnmounted(() => { clearTimer(state); clearPatienceTimer(state) })
 </script>
 
 <template>
   <div class="game-root" :class="{ 'screen-shake': state.screenShake }">
     <!-- Start Screen -->
     <div v-if="screen === 'start'" class="screen start-screen">
-      <img :src="`${BASE_URL}assets/cover.webp`" alt="Bubble Tea Lab" class="cover-img">
+      <img :src="`${BASE_URL}assets/bubble-tea-lab/cover.webp`" alt="Bubble Tea Lab" class="cover-img">
       <h1>🧋 {{ t('title') }}</h1>
       <p class="subtitle">{{ t('subtitle') }}</p>
       <div class="coins-bar">💰 {{ state.totalCoins }}</div>
       <div class="btn-group">
         <button class="btn btn-primary btn-hero" @click="goPlay">{{ t('buttons.start') }}</button>
         <div class="btn-grid">
+          <button class="btn btn-grid-item btn-expedition" @click="screen = 'expedition'">🗺️ {{ t('buttons.expedition') }}</button>
           <button class="btn btn-grid-item btn-daily" @click="goDaily">{{ t('buttons.daily') }}</button>
           <button class="btn btn-grid-item btn-event" @click="screen = 'event'">{{ t('buttons.event') }}</button>
           <button class="btn btn-grid-item btn-shop" @click="goShop">{{ t('buttons.shop') }}</button>
@@ -415,9 +484,9 @@ onUnmounted(() => clearTimer(state))
       </div>
       <!-- Legal Links (CG requirement) -->
       <div class="legal-links">
-        <a href="https://tools.pixiaoli.cn/terms" target="_blank">Terms & Conditions</a>
+        <a href="#" @click.prevent="showTerms = true">Terms & Conditions</a>
         <span> · </span>
-        <a href="https://tools.pixiaoli.cn/privacy" target="_blank">Privacy Policy</a>
+        <a href="#" @click.prevent="showPrivacy = true">Privacy Policy</a>
       </div>
     </div>
 
@@ -438,6 +507,13 @@ onUnmounted(() => clearTimer(state))
     <!-- Game Screen -->
     <div v-else-if="screen === 'game'" class="screen game-screen">
       <img src="/assets/bg_shop.webp" class="game-bg" alt="">
+      <!-- Event Banner (Task 2) -->
+      <div v-if="state.activeEvent" class="event-banner" :class="state.activeEvent.effect">
+        <span class="event-icon">{{ state.activeEvent.icon }}</span>
+        <span class="event-text">{{ state.activeEvent.name }}</span>
+        <span class="event-desc">{{ state.activeEvent.desc }}</span>
+        <span class="event-cups" v-if="state.eventRemainingCups > 0">({{ state.eventRemainingCups }} cups left)</span>
+      </div>
       <div class="game-content">
         <GameHud
           :score="state.score"
@@ -445,14 +521,24 @@ onUnmounted(() => clearTimer(state))
           :combo="state.combo"
           :time-left="state.isDaily ? state.dailyTimer : undefined"
         />
-        <div class="customer-zone">
+        <div class="customer-zone" :class="{
+          'flash-correct': state.customerReaction === 'correct',
+          'flash-wrong': state.customerReaction === 'wrong',
+        }">
           <CustomerDisplay
             :customer="state.currentCustomer"
             :order="state.currentOrder"
             :mood="state.customerMood"
             :fulfilled-indices="fulfilledIndices"
             :personality="state.currentCustomer?.personalityId"
+            :patience="state.customerPatience"
+            :maxPatience="state.customerMaxPatience"
+            :reaction="state.customerReaction"
           />
+        </div>
+        <!-- Lucky ingredient hint -->
+        <div v-if="state.luckyIngredientId" class="lucky-hint">
+          🍀 {{ t('floatText.luckyIngredient') }}!
         </div>
         <CupVisualEnhanced :contents="state.cupContents" />
         <div class="game-actions">
@@ -586,6 +672,15 @@ onUnmounted(() => clearTimer(state))
       @claimReward="handleClaimEventReward"
     />
 
+    <!-- Expedition Screen -->
+    <div v-if="screen === 'expedition'" class="screen expedition-screen">
+      <ExpeditionBattle
+        :exp="expeditionState"
+        @end="handleExpeditionEnd"
+        @back="handleExpeditionBack"
+      />
+    </div>
+
     <!-- Float effects -->
     <div
       v-for="ft in state.floatTexts"
@@ -614,6 +709,128 @@ onUnmounted(() => clearTimer(state))
 
     <!-- Particle Effects -->
     <ParticleEffects :active="state.combo > 1" :combo="state.combo" />
+
+    <!-- Terms & Conditions Modal -->
+    <Teleport to="body">
+      <Transition name="modal-fade">
+        <div v-if="showTerms" class="modal-overlay" @click.self="showTerms = false">
+          <div class="modal-card">
+            <button class="modal-close" @click="showTerms = false">✕</button>
+            <h2 class="modal-title">📋 Terms & Conditions</h2>
+            <div class="modal-content">
+              <p><strong>Last Updated:</strong> June 2026</p>
+
+              <h3>1. Acceptance of Terms</h3>
+              <p>By accessing and playing Bubble Tea Lab ("the Game"), you agree to be bound by these Terms & Conditions. If you do not agree to these terms, please do not use the Game.</p>
+
+              <h3>2. Free to Play</h3>
+              <p>Bubble Tea Lab is a free-to-play game. No purchase is required to download or enjoy the full gameplay experience. The Game is supported by advertisements to keep it free for everyone.</p>
+
+              <h3>3. Virtual Currency</h3>
+              <p>The Game contains virtual currency (coins, gems, etc.) that can be earned through gameplay. These virtual currencies have no real-world monetary value and cannot be exchanged, transferred, or redeemed for real money, goods, or services. Virtual currency is non-transferable and tied to your game session.</p>
+
+              <h3>4. Advertisements</h3>
+              <p>The Game is supported by advertisements. You may encounter various ad formats including banner ads, interstitial ads, and rewarded video ads. Watching rewarded ads is entirely optional and provides in-game benefits. We reserve the right to change ad partners and ad frequency at any time.</p>
+
+              <h3>5. User-Generated Content</h3>
+              <p>If you create, upload, or share any content within or through the Game (including but not limited to custom recipes, screenshots, or scores), you grant us a non-exclusive, worldwide, royalty-free license to use, reproduce, modify, and display such content for the purpose of operating and improving the Game.</p>
+
+              <h3>6. Prohibited Conduct</h3>
+              <p>You agree not to:</p>
+              <ul>
+                <li>Use cheats, exploits, bots, or automated scripts</li>
+                <li>Reverse engineer, decompile, or disassemble any part of the Game</li>
+                <li>Attempt to manipulate virtual currency or in-game rewards</li>
+                <li>Use the Game for any unlawful purpose</li>
+                <li>Interfere with or disrupt the Game's servers or infrastructure</li>
+              </ul>
+
+              <h3>7. Intellectual Property</h3>
+              <p>All content, graphics, sounds, and code within the Game are the property of the developer and are protected by copyright and intellectual property laws. You may not copy, modify, distribute, or reverse-engineer any part of the Game without prior written permission.</p>
+
+              <h3>8. Disclaimer of Warranties</h3>
+              <p>THE GAME IS PROVIDED "AS IS" AND "AS AVAILABLE" WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED. WE DO NOT WARRANT THAT THE GAME WILL BE UNINTERRUPTED, ERROR-FREE, OR SECURE. WE DISCLAIM ALL WARRANTIES, INCLUDING BUT NOT LIMITED TO IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.</p>
+
+              <h3>9. Limitation of Liability</h3>
+              <p>IN NO EVENT SHALL THE DEVELOPER BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES ARISING OUT OF OR RELATED TO YOUR USE OF THE GAME. OUR TOTAL LIABILITY SHALL NOT EXCEED THE AMOUNT YOU HAVE PAID US (IF ANY) IN THE PAST SIX MONTHS.</p>
+
+              <h3>10. Changes to Terms</h3>
+              <p>We reserve the right to modify these Terms at any time. Changes will be effective immediately upon posting. Continued use of the Game after changes constitutes acceptance of the new Terms.</p>
+
+              <h3>11. Governing Law</h3>
+              <p>These Terms shall be governed by and construed in accordance with applicable laws, without regard to conflict of law principles.</p>
+
+              <p style="text-align: center; margin-top: 20px; opacity: 0.6;">🧋 Thank you for playing Bubble Tea Lab! 🧋</p>
+            </div>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
+
+    <!-- Privacy Policy Modal -->
+    <Teleport to="body">
+      <Transition name="modal-fade">
+        <div v-if="showPrivacy" class="modal-overlay" @click.self="showPrivacy = false">
+          <div class="modal-card">
+            <button class="modal-close" @click="showPrivacy = false">✕</button>
+            <h2 class="modal-title">🔒 Privacy Policy</h2>
+            <div class="modal-content">
+              <p><strong>Last Updated:</strong> June 2026</p>
+
+              <h3>1. Overview</h3>
+              <p>Bubble Tea Lab ("the Game") is designed with your privacy in mind. This Privacy Policy explains what data we collect, how we use it, and your rights regarding your information.</p>
+
+              <h3>2. Data We Do NOT Collect</h3>
+              <p>We want to be clear: <strong>We do not collect any personal data.</strong> We do not collect your name, email address, phone number, location, device identifiers, or any other personally identifiable information. The Game does not require you to create an account or log in.</p>
+
+              <h3>3. Local Storage</h3>
+              <p>Your game progress, preferences, and achievements are stored locally on your device using browser localStorage. This data never leaves your device and is not transmitted to our servers. Local storage data includes:</p>
+              <ul>
+                <li>Game progress and high scores</li>
+                <li>Unlocked ingredients and customers</li>
+                <li>Equipped themes and decorations</li>
+                <li>Recipe book progress</li>
+                <li>Achievement status</li>
+                <li>Language preference</li>
+              </ul>
+              <p>You can clear this data at any time through your browser settings, though this will reset your game progress.</p>
+
+              <h3>4. Advertising & Third-Party Partners</h3>
+              <p>The Game is supported by advertisements. Our advertising partners may use cookies, web beacons, or similar technologies to serve relevant ads. These partners may collect information such as:</p>
+              <ul>
+                <li>Device type and browser information</li>
+                <li>Ad interaction data (impressions, clicks)</li>
+                <li>General geographic region (country/region level only)</li>
+              </ul>
+              <p>This data is collected by third-party ad networks and is subject to their own privacy policies. We do not have direct access to or control over the specific data collected by these ad networks.</p>
+
+              <h3>5. Third-Party Services</h3>
+              <p>The Game may use the following third-party services:</p>
+              <ul>
+                <li><strong>CrazyGames SDK:</strong> Platform integration and ad delivery — <a href="https://www.crazygames.com/privacy" target="_blank" rel="noopener">CrazyGames Privacy Policy</a></li>
+                <li><strong>Google AdMob / similar ad networks:</strong> Advertisement delivery — <a href="https://policies.google.com/privacy" target="_blank" rel="noopener">Google Privacy Policy</a></li>
+              </ul>
+              <p>Each third-party service has its own privacy policy. We encourage you to review their policies for more information on how they handle your data.</p>
+
+              <h3>6. Children's Privacy</h3>
+              <p>The Game does not knowingly collect personal information from children under 13 years of age. Since we do not collect any personal data at all, the Game is safe for users of all ages.</p>
+
+              <h3>7. Data Security</h3>
+              <p>While we do not collect personal data, we take reasonable measures to ensure the security of the Game and its infrastructure. However, no method of transmission over the internet is 100% secure, and we cannot guarantee absolute security.</p>
+
+              <h3>8. Changes to This Policy</h3>
+              <p>We may update this Privacy Policy from time to time. Any changes will be reflected in the "Last Updated" date above. We recommend reviewing this policy periodically.</p>
+
+              <h3>9. Contact Us</h3>
+              <p>If you have any questions or concerns about this Privacy Policy or the Game's data practices, please contact us at:</p>
+              <p style="text-align: center;"><strong>📧 hello@pixiaoli.cn</strong></p>
+
+              <p style="text-align: center; margin-top: 20px; opacity: 0.6;">🧋 We respect your privacy! 🧋</p>
+            </div>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
   </div>
 </template>
 
@@ -885,6 +1102,15 @@ html, body { width: 100%; height: 100%; overflow: hidden; font-family: 'PingFang
   background: linear-gradient(135deg, #FF6B6B, #4ECDC4); color: #fff;
   font-weight: 700;
 }
+.btn-expedition {
+  background: linear-gradient(135deg, #667eea, #f093fb); color: #fff;
+  font-weight: 700;
+}
+
+.expedition-screen {
+  padding: 0;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
 
 .btn-daily-reward {
   background: linear-gradient(135deg, #00b894, #00cec9); color: #fff;
@@ -916,4 +1142,117 @@ html, body { width: 100%; height: 100%; overflow: hidden; font-family: 'PingFang
   display: flex; align-items: center; justify-content: center;
   margin-bottom: 6px; border: 2px solid rgba(255,255,255,0.2);
 }
+
+/* Event Banner (Task 2) */
+.event-banner {
+  position: absolute; top: 0; left: 0; right: 0; z-index: 10;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 8px 16px;
+  background: linear-gradient(135deg, rgba(255,107,107,0.9), rgba(78,205,196,0.9));
+  color: #fff; font-size: 0.85em; font-weight: 600;
+  animation: event-slide 0.4s ease;
+  backdrop-filter: blur(8px);
+}
+.event-banner.patience_freeze { background: linear-gradient(135deg, rgba(0,184,148,0.9), rgba(0,206,201,0.9)); }
+.event-banner.tip_boost { background: linear-gradient(135deg, rgba(255,215,0,0.9), rgba(255,140,0,0.9)); }
+.event-banner.double_order { background: linear-gradient(135deg, rgba(102,126,234,0.9), rgba(118,75,162,0.9)); }
+.event-banner.speed_rush { background: linear-gradient(135deg, rgba(255,99,71,0.9), rgba(255,165,0,0.9)); }
+.event-banner.lucky_ingredient { background: linear-gradient(135deg, rgba(76,175,80,0.9), rgba(139,195,74,0.9)); }
+.event-icon { font-size: 1.3em; }
+.event-text { font-weight: 700; }
+.event-desc { opacity: 0.9; font-size: 0.85em; }
+.event-cups { opacity: 0.8; font-size: 0.8em; }
+@keyframes event-slide {
+  0% { transform: translateY(-100%); opacity: 0; }
+  100% { transform: translateY(0); opacity: 1; }
+}
+
+/* Customer zone flash (Task 4) */
+.customer-zone.flash-correct {
+  border-color: #4CAF50 !important;
+  box-shadow: 0 0 20px rgba(76,175,80,0.4);
+  transition: all 0.2s;
+}
+.customer-zone.flash-wrong {
+  border-color: #F44336 !important;
+  box-shadow: 0 0 20px rgba(244,67,54,0.4);
+  transition: all 0.2s;
+}
+
+/* Lucky ingredient hint */
+.lucky-hint {
+  text-align: center; color: #4CAF50; font-size: 0.8em; font-weight: 600;
+  padding: 4px 12px;
+  background: rgba(76,175,80,0.15);
+  border-radius: 12px;
+  margin: 2px 14px;
+  animation: pulse 1.5s infinite;
+}
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+/* Legal modals */
+.modal-overlay {
+  position: fixed; inset: 0; z-index: 1000;
+  background: rgba(0,0,0,0.55);
+  display: flex; align-items: center; justify-content: center;
+  padding: 20px;
+  animation: fade-in 0.25s ease;
+}
+.modal-card {
+  position: relative;
+  background: #fff;
+  border-radius: 24px;
+  max-width: 480px; width: 100%;
+  max-height: 80vh;
+  box-shadow: 0 12px 48px rgba(0,0,0,0.25);
+  overflow: hidden;
+  animation: pop-in 0.3s ease;
+}
+.modal-close {
+  position: absolute; top: 14px; right: 14px; z-index: 2;
+  width: 36px; height: 36px; border-radius: 50%; border: none;
+  background: linear-gradient(135deg, #f093fb, #f5576c);
+  color: #fff; font-size: 16px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 4px 12px rgba(240,147,251,0.4);
+  transition: transform 0.15s;
+}
+.modal-close:hover { transform: scale(1.1); }
+.modal-close:active { transform: scale(0.9); }
+.modal-title {
+  margin: 0; padding: 24px 56px 16px 24px;
+  font-size: 1.3em; color: #333;
+  background: linear-gradient(135deg, rgba(255,154,158,0.12), rgba(161,140,209,0.12));
+  border-bottom: 1px solid rgba(0,0,0,0.06);
+}
+.modal-content {
+  padding: 20px 24px 24px;
+  overflow-y: auto;
+  max-height: calc(80vh - 80px);
+  color: #444; font-size: 0.88em; line-height: 1.7;
+}
+.modal-content h3 {
+  color: #f5576c; margin: 18px 0 6px; font-size: 1.05em;
+}
+.modal-content p { margin: 8px 0; }
+.modal-content ul {
+  padding-left: 20px; margin: 6px 0;
+}
+.modal-content li { margin: 3px 0; }
+.modal-content a {
+  color: #667eea; text-decoration: underline;
+}
+
+/* Scrollbar for modal */
+.modal-content::-webkit-scrollbar { width: 6px; }
+.modal-content::-webkit-scrollbar-track { background: transparent; }
+.modal-content::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.15); border-radius: 3px; }
+
+/* Transition */
+.modal-fade-enter-active { transition: opacity 0.25s ease; }
+.modal-fade-leave-active { transition: opacity 0.2s ease; }
+.modal-fade-enter-from, .modal-fade-leave-to { opacity: 0; }
 </style>

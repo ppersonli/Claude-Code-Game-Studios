@@ -13,6 +13,7 @@ export default {
     themes: '🎨 Temi',
     recipe: '📖 Ricette',
     decor: '🏪 Arredamento',
+    expedition: '🗺️ Spedizione',
     serve: 'Servire 🧋',
     reset: 'Svuota',
     back: 'Indietro',
@@ -305,6 +306,12 @@ export default {
     dailyReward: '📅 Ricompensa +{amount}💰',
     doubleCoins: '🎬 Doppie monete! +{amount}',
     achievement: '🏆 {name}!',
+    customerLeft: '💢 Cliente andato! Combo persa, -10 monete',
+    luckyIngredient: 'Ingrediente fortunato',
+  },
+  
+  randomEvents: {
+    tip_storm: 'Tempesta mance', time_freeze: 'Tempo gelato', double_order: 'Doppio ordine', speed_rush: 'Speed Rush', lucky_ingredient: 'Ingrediente fortunato',
   },
   
   daily: {
@@ -323,4 +330,50 @@ export default {
   },
   
   language: 'Lingua',
+
+  expedition: {
+    title: 'Spedizione Mostri',
+    dailyFirstBonus: 'Prima di oggi: drop x2!',
+    startBattle: 'Inizia Battaglia',
+    noStamina: 'Senza energia',
+    tapToAttack: 'TOCCA TOCCA TOCCA! 👊',
+    expeditionComplete: 'Spedizione completata!',
+    monstersDefeated: 'Sconfitti',
+    maxCombo: 'Combo max',
+    totalDamage: 'Danno totale',
+    dailyDropsDoubled: 'Drop raddoppiati oggi!',
+    itemsObtained: 'Oggetti ottenuti',
+    noDrops: 'Nessun oggetto questa volta...',
+    collect: 'Raccogli',
+    bestiary: 'Bestiario',
+  },
+
+  zones: {
+    tea_garden: 'Giardino del Tè',
+    ranch: 'Fattoria del Latte',
+    candy_cave: 'Grotta dei Dolci',
+    orchard: 'Frutteto',
+    ice_field: 'Campo di Ghiaccio',
+    abyss: 'L\'Abisso',
+  },
+
+  monsters: {
+    tea_slime_green: 'Slime Tè Verde',
+    tea_slime_black: 'Slime Tè Nero',
+    leaf_fairy: 'Fata delle Foglie',
+    milk_cloud: 'Nuvola di Latte',
+    coconut_palm: 'Granchio Cocco',
+    cream_sheep: 'Pecora Panna',
+    boba_bunny: 'Coniglietto Boba',
+    jelly_fish: 'Medusa Gelatina',
+    pudding_bear: 'Orso Budino',
+    strawberry_sprite: 'Spirito Fragola',
+    mango_monkey: 'Scimmia Mango',
+    fruit_parrot: 'Pappagallo Frutta',
+    ice_beast: 'Bestia di Ghiaccio',
+    snow_fox: 'Volpe delle Nevi',
+    frost_dragon: 'Drago del Gelo',
+    taro_monster: 'Mostro Taro',
+    shadow_slime: 'Slime Ombra',
+  },
 }

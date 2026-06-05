@@ -27,6 +27,7 @@ const games = [
   'dungeon-defense-idle',
   'space-farm-idle',
   'bounce-golf',
+  'idle-garden',
 ]
 
 console.log('📦 生成CG提交包...\n')
@@ -43,6 +44,15 @@ for (const game of games) {
   // 创建输出目录
   const outDir = resolve(ROOT, `dist/cg-${game}`)
   mkdirSync(resolve(outDir, 'assets'), { recursive: true })
+
+  // === 步骤0: 复制游戏公共资源 ===
+  const gamePublicAssets = resolve(ROOT, `src/games/${game}/public/assets/${game}`)
+  if (existsSync(gamePublicAssets)) {
+    const destGameAssets = resolve(outDir, 'assets', game)
+    mkdirSync(destGameAssets, { recursive: true })
+    cpSync(gamePublicAssets, destGameAssets, { recursive: true })
+    console.log(`  📁 复制公共资源: assets/${game}/`)
+  }
 
   // 读取HTML
   let html = readFileSync(srcHtml, 'utf-8')

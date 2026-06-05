@@ -13,6 +13,7 @@ export default {
     themes: '🎨 Темы',
     recipe: '📖 Рецепты',
     decor: '🏪 Декор',
+    expedition: '🗺️ Экспедиция',
     serve: 'Подать 🧋',
     reset: 'Очистить',
     back: 'Назад',
@@ -305,6 +306,12 @@ export default {
     dailyReward: '📅 Награда +{amount}💰',
     doubleCoins: '🎬 Двойные монеты! +{amount}',
     achievement: '🏆 {name}!',
+    customerLeft: '💢 Клиент ушёл! Комбо сброшено, -10 монет',
+    luckyIngredient: 'Счастливый ингредиент',
+  },
+  
+  randomEvents: {
+    tip_storm: 'Шторм чаевых', time_freeze: 'Заморозка', double_order: 'Двойной заказ', speed_rush: 'Speed Rush', lucky_ingredient: 'Счастливый ингредиент',
   },
   
   daily: {
@@ -323,4 +330,50 @@ export default {
   },
   
   language: 'Язык',
+
+  expedition: {
+    title: 'Экспедиция Монстров',
+    dailyFirstBonus: 'Первая за день: дроп x2!',
+    startBattle: 'Начать Бой',
+    noStamina: 'Нет энергии',
+    tapToAttack: 'ЖМИ ЖМИ ЖМИ! 👊',
+    expeditionComplete: 'Экспедиция завершена!',
+    monstersDefeated: 'Побеждено',
+    maxCombo: 'Макс Комбо',
+    totalDamage: 'Общий урон',
+    dailyDropsDoubled: 'Дроп удвоен сегодня!',
+    itemsObtained: 'Полученные предметы',
+    noDrops: 'В этот раз без предметов...',
+    collect: 'Собрать',
+    bestiary: 'Бестиарий',
+  },
+
+  zones: {
+    tea_garden: 'Чайный Сад',
+    ranch: 'Молочная Ферма',
+    candy_cave: 'Конфетная Пещера',
+    orchard: 'Фруктовый Сад',
+    ice_field: 'Ледяное Поле',
+    abyss: 'Бездна',
+  },
+
+  monsters: {
+    tea_slime_green: 'Зелёный Чайный Слизь',
+    tea_slime_black: 'Чёрный Чайный Слизь',
+    leaf_fairy: 'Листовая Фея',
+    milk_cloud: 'Молочное Облако',
+    coconut_palm: 'Кокосовый Краб',
+    cream_sheep: 'Сливочная Овца',
+    boba_bunny: 'Боба Кролик',
+    jelly_fish: 'Желейная Медуза',
+    pudding_bear: 'Пудинговый Медведь',
+    strawberry_sprite: 'Клубничный Дух',
+    mango_monkey: 'Манговая Обезьяна',
+    fruit_parrot: 'Фруктовый Попугай',
+    ice_beast: 'Ледяной Зверь',
+    snow_fox: 'Снежная Лиса',
+    frost_dragon: 'Ледяной Дракон',
+    taro_monster: 'Таро Монстр',
+    shadow_slime: 'Теневой Слизь',
+  },
 }

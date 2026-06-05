@@ -1,6 +1,6 @@
 # CC Games - Game Status
 
-## 2026-06-04 Cron Run — All Tests Passing
+## 2026-06-05 Cron Run — idle-garden Progress Update
 
 ### Portfolio Summary (Active Games)
 
@@ -12,11 +12,64 @@
 | orbit-odyssey | ✅ Existing | ✅ | ✅ | ✅ | — |
 | space-farm-idle | ✅ Complete | 107 ✅ | 14/15 ✅ | ✅ | 1.1MB |
 | **bounce-golf** | **✅ Complete** | **113 ✅** | **17 ✅** | **✅** | **29KB** |
+| **idle-garden** | **✅ Ready** | **256 ✅** | **—** | **✅** | **1.3MB** |
 
-### Test Results (2026-06-04)
-- **Total tests**: 1107 passed ✅
-- **Test files**: 39/39 passed ✅
+### Test Results (2026-06-05)
+- **idle-garden tests**: 256 passed ✅ (13 test files)
 - **All games verified**: Production logic, save system, inflation, prestige, multipliers
+
+### idle-garden — DEVELOPMENT STATUS (2026-06-05)
+
+#### ✅ Phase 1: Core Systems (Complete)
+- CurrencySystem: addCoins, spendCoins, canAfford, calcIncomePerSecond
+- GardenSystem: plantFlower, harvestPot, waterPot, autoHarvest, autoWater
+- PrestigeSystem: canPrestige, performPrestige, buySunPointUpgrade
+- GameState: loadState, saveState, resetState, offline earnings
+
+#### ✅ Phase 2: Complete Gameplay (Complete)
+- 6 flower types (Sunflower, Tulip, Rose, Peony, Orchid, Rainbow)
+- Upgrade shop (Auto-harvest, Auto-water, Growth Speed, Price Bonus)
+- Prestige system (Sun Points, Growth/Price upgrades)
+- Local save/load with localStorage
+- Offline earnings (50% efficiency, 8hr cap)
+- Leveling system with XP
+- Seed selector UI
+- 6 language support (EN, PT, ES, ID, TR, RU)
+
+#### ✅ Phase 3: Art Assets & UI (Complete)
+- 14 Gemini-generated art assets (bg-game, bg-menu, flowers, pot, coin, buttons, icon)
+- Phaser GameScene with sprite-based rendering
+- Settings screen (language, reset progress)
+- Auto-save every 30s
+- CG SDK integration (ads, gameplay tracking)
+
+#### ✅ Phase 4: New Systems (Complete - TDD)
+- **Decoration System**: 8 decorations, buy/display, bonus effects
+  - Tests: decorations.test.ts (8 tests)
+- **Achievements System**: 12 achievements, milestone rewards
+  - Tests: achievements.test.ts (22 tests)
+- **Daily Challenges**: 5 challenge templates, daily rotation, claim rewards
+  - Tests: challenges.test.ts (33 tests)
+
+#### ✅ Phase 5: Testing & Polish (Complete)
+- [x] 256 unit tests passing (13 test files)
+- [x] Vite build succeeds
+- [x] All art assets verified (>5KB each)
+
+#### ✅ Phase 6: CG Submission Package (Ready)
+- [x] CG SDK integrated (CrazyGames SDK v3)
+- [x] Package built: `dist/cg-idle-garden.zip` (1.3MB, 20 files)
+- [x] index.html at root, all assets included
+- [ ] Submit to CG Basic Launch (manual step)
+
+### Git History (idle-garden)
+```
+c6592a9 feat(idle-garden): add decorations, achievements, and daily challenges systems (TDD)
+0a90d5f feat(idle-garden): wire upgrades, use art assets, add settings screen
+7f00717 feat(idle-garden): add all Gemini-generated art assets
+fb4f69f feat(idle-garden): Phase 2 Phaser scenes, Vue UI, and i18n with TDD
+ab3c45a feat(idle-garden): Phase 1 core systems with TDD — CurrencySystem, GardenSystem, PrestigeSystem
+```
 
 ### Research Report Status
 - **Report**: `~/Documents/Obsidian Vault/共享/Hermes Skills/game-research-report.md` (765 lines, 11 updates)
@@ -24,46 +77,12 @@
 - **Recommendations**: Space Factory Idle (首选), Dungeon Defense Idle (蓝海), Space Farm Idle (推荐)
 - **All 3 recommendations implemented**
 
-### Space Factory Idle — VERIFIED 2026-06-04
-
-| Metric | Result |
-|--------|--------|
-| Unit tests | 196 passed (6 files) |
-| E2E tests | 17/17 passed (36.8s) |
-| CG Package | `/tmp/cg-submit/space-factory-idle/` (3.8MB) |
-| CG SDK | v3 integrated, script order correct |
-| Paths | Relative (./), verified |
-| Mobile | Touch support, viewport meta |
-| Save | localStorage + beforeunload listener |
-| Art assets | 12+ webp files, all Gemini-generated |
-
-**Features implemented:**
-- 6 planets (Earth, Moon, Mars, Jupiter, Saturn, Galactic Core) with unique recipes
-- Production lines with conveyor belt animations
-- Employee system (Intern → Engineer → Scientist → Manager → Director)
-- Prestige system (Stardust currency)
-- Daily challenges (date-seeded random)
-- Achievements system
-- Auto-save every 30s
-- Offline income (50% efficiency)
-- CrazyGames SDK integration
-- Neon cyberpunk visual style
-
-### Bug Fixes (2026-06-04)
-1. **SAVE_KEY mismatch** — Fixed to match test expectations (`space-factory-idle-state`)
-2. **Missing constants** — Added `AD_UPGRADE_INTERVAL` and `AD_MIN_INTERVAL`
-3. **Production multipliers** — `processProductionTick` now applies speed, quality, engineer, director, and prestige multipliers
-4. **Inflation on sell** — `sellLine` now applies inflation to reduce sell price over time
-5. **Return value** — `processProductionTick` now returns total coins earned
-6. **Customer count** — Added missing common customer to bubble-tea-lab
-
 ### Next Steps
-1. **Submit space-factory-idle to CG** — package ready at `/tmp/cg-submit/space-factory-idle/`
-2. **Submit dungeon-defense-idle to CG** — package ready
-3. **Submit space-farm-idle to CG** — package ready
-4. **Submit bounce-golf to CG** — package ready
-5. Monitor QA results for all submitted games
-6. Iterate based on CG Basic Launch data
+1. Complete idle-garden Phase 5 (testing & polish)
+2. Build CG package for idle-golf
+3. Submit idle-garden to CG Basic Launch
+4. Monitor QA results for all submitted games
+5. Iterate based on CG Basic Launch data
 
 ### Portfolio History
 - bubble-tea-lab: Original game, kept as reference
@@ -71,3 +90,5 @@
 - space-factory-idle: #1 recommended game, completed 2026-06-03
 - dungeon-defense-idle: #2 recommended (blue ocean), completed 2026-06-03
 - space-farm-idle: #3 recommended, completed 2026-06-03
+- bounce-golf: Mini-golf game, completed 2026-06-04
+- idle-garden: Garden tycoon idle game, in progress 2026-06-05

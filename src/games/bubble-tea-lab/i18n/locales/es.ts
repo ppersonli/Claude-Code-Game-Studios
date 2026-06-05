@@ -13,6 +13,7 @@ export default {
     themes: '🎨 Temas',
     recipe: '📖 Recetas',
     decor: '🏪 Decoración',
+    expedition: '🗺️ Expedición',
     serve: 'Servir 🧋',
     reset: 'Vaciar',
     back: 'Volver',
@@ -305,6 +306,12 @@ export default {
     dailyReward: '📅 Recompensa +{amount}💰',
     doubleCoins: '🎬 ¡Doble monedas! +{amount}',
     achievement: '🏆 ¡{name}!',
+    customerLeft: '💢 ¡Cliente se fue! Combo perdido, -10 monedas',
+    luckyIngredient: 'Ingrediente suerte',
+  },
+  
+  randomEvents: {
+    tip_storm: 'Tormenta propinas', time_freeze: 'Congelar tiempo', double_order: 'Doble pedido', speed_rush: 'Speed Rush', lucky_ingredient: 'Ingrediente suerte',
   },
   
   daily: {
@@ -323,4 +330,50 @@ export default {
   },
   
   language: 'Idioma',
+
+  expedition: {
+    title: 'Expedición Monstruos',
+    dailyFirstBonus: 'Primera del día: ¡drops x2!',
+    startBattle: 'Iniciar Batalla',
+    noStamina: 'Sin energía',
+    tapToAttack: '¡TOCA TOCA TOCA! 👊',
+    expeditionComplete: '¡Expedición completa!',
+    monstersDefeated: 'Derrotados',
+    maxCombo: 'Combo máx',
+    totalDamage: 'Daño total',
+    dailyDropsDoubled: '¡Drops duplicados hoy!',
+    itemsObtained: 'Objetos obtenidos',
+    noDrops: 'Sin objetos esta vez...',
+    collect: 'Recoger',
+    bestiary: 'Bestiario',
+  },
+
+  zones: {
+    tea_garden: 'Jardín de Té',
+    ranch: 'Granja Lechera',
+    candy_cave: 'Cueva de Dulces',
+    orchard: 'Huerto',
+    ice_field: 'Campo de Hielo',
+    abyss: 'El Abismo',
+  },
+
+  monsters: {
+    tea_slime_green: 'Slime de Té Verde',
+    tea_slime_black: 'Slime de Té Negro',
+    leaf_fairy: 'Hada de Hojas',
+    milk_cloud: 'Nube de Leche',
+    coconut_palm: 'Cangrejo Coco',
+    cream_sheep: 'Oveja Crema',
+    boba_bunny: 'Conejito Boba',
+    jelly_fish: 'Medusa Gelatina',
+    pudding_bear: 'Oso Pudín',
+    strawberry_sprite: 'Espíritu Fresa',
+    mango_monkey: 'Mono Mango',
+    fruit_parrot: 'Loro Frutal',
+    ice_beast: 'Bestia de Hielo',
+    snow_fox: 'Zorro Nieve',
+    frost_dragon: 'Dragón Escarcha',
+    taro_monster: 'Monstruo Taro',
+    shadow_slime: 'Slime Sombra',
+  },
 }

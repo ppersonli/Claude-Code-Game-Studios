@@ -1,13 +1,13 @@
 import type { Customer, Achievement, GameState } from '@types'
 
 export const CUSTOMERS: readonly Customer[] = [
-  { name: '小美', img: `${import.meta.env.BASE_URL}assets/customer_girl.webp`, rarity: 'common', personalityId: 'student' },
-  { name: '小明', img: `${import.meta.env.BASE_URL}assets/customer_boy.webp`, rarity: 'common', personalityId: 'office_worker' },
-  { name: '酷哥', img: `${import.meta.env.BASE_URL}assets/customer_cool.webp`, rarity: 'common', personalityId: 'student' },
-  { name: '甜心', img: `${import.meta.env.BASE_URL}assets/customer_sweet.webp`, rarity: 'common', personalityId: 'office_worker' },
-  { name: '猫猫酱', img: `${import.meta.env.BASE_URL}assets/customer_catgirl.webp`, rarity: 'rare', tipBonus: 1.5, locked: true, unlockCost: 500, personalityId: 'blogger' },
-  { name: '机器人', img: `${import.meta.env.BASE_URL}assets/customer_robot.webp`, rarity: 'rare', tipBonus: 1.5, locked: true, unlockCost: 800, personalityId: 'demon' },
-  { name: 'VIP大人', img: `${import.meta.env.BASE_URL}assets/customer_vip.webp`, rarity: 'legendary', tipBonus: 2.0, locked: true, unlockCost: 1500, personalityId: 'vip' },
+  { name: '小美', img: `${import.meta.env.BASE_URL}assets/customer_girl.webp`, rarity: 'common', personalityId: 'student', patience: 25 },
+  { name: '小明', img: `${import.meta.env.BASE_URL}assets/customer_boy.webp`, rarity: 'common', personalityId: 'office_worker', patience: 20 },
+  { name: '酷哥', img: `${import.meta.env.BASE_URL}assets/customer_cool.webp`, rarity: 'common', personalityId: 'student', patience: 22 },
+  { name: '甜心', img: `${import.meta.env.BASE_URL}assets/customer_sweet.webp`, rarity: 'common', personalityId: 'office_worker', patience: 25 },
+  { name: '猫猫酱', img: `${import.meta.env.BASE_URL}assets/customer_catgirl.webp`, rarity: 'rare', tipBonus: 1.5, locked: true, unlockCost: 500, personalityId: 'blogger', patience: 18, minLevel: 3 },
+  { name: '机器人', img: `${import.meta.env.BASE_URL}assets/customer_robot.webp`, rarity: 'rare', tipBonus: 1.5, locked: true, unlockCost: 800, personalityId: 'demon', patience: 15, minLevel: 4 },
+  { name: 'VIP大人', img: `${import.meta.env.BASE_URL}assets/customer_vip.webp`, rarity: 'legendary', tipBonus: 2.0, locked: true, unlockCost: 1500, personalityId: 'vip', patience: 12, minLevel: 5 },
 ] as const
 
 export const ACHIEVEMENTS: readonly Achievement[] = [

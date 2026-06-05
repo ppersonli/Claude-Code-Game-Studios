@@ -13,6 +13,7 @@ export default {
     themes: '🎨 Thèmes',
     recipe: '📖 Recettes',
     decor: '🏪 Déco',
+    expedition: '🗺️ Expédition',
     serve: 'Servir 🧋',
     reset: 'Vider',
     back: 'Retour',
@@ -305,6 +306,12 @@ export default {
     dailyReward: '📅 Récompense +{amount}💰',
     doubleCoins: '🎬 Doubles pièces ! +{amount}',
     achievement: '🏆 {name} !',
+    customerLeft: '💢 Client parti ! Combo perdu, -10 pièces',
+    luckyIngredient: 'Ingrédient chanceux',
+  },
+  
+  randomEvents: {
+    tip_storm: 'Tempête de pourboires', time_freeze: 'Gel du temps', double_order: 'Double commande', speed_rush: 'Speed Rush', lucky_ingredient: 'Ingrédient chanceux',
   },
   
   daily: {
@@ -323,4 +330,50 @@ export default {
   },
   
   language: 'Langue',
+
+  expedition: {
+    title: 'Expédition Monstres',
+    dailyFirstBonus: 'Première du jour : drops x2 !',
+    startBattle: 'Commencer',
+    noStamina: 'Pas d\'énergie',
+    tapToAttack: 'TAPE TAPE TAPE ! 👊',
+    expeditionComplete: 'Expédition terminée !',
+    monstersDefeated: 'Vaincus',
+    maxCombo: 'Combo max',
+    totalDamage: 'Dégâts totaux',
+    dailyDropsDoubled: 'Drops doublés aujourd\'hui !',
+    itemsObtained: 'Objets obtenus',
+    noDrops: 'Aucun objet cette fois...',
+    collect: 'Collecter',
+    bestiary: 'Bestiaire',
+  },
+
+  zones: {
+    tea_garden: 'Jardin de Thé',
+    ranch: 'Ranch Laitier',
+    candy_cave: 'Grotte Bonbon',
+    orchard: 'Verger',
+    ice_field: 'Champ de Glace',
+    abyss: 'Les Abysses',
+  },
+
+  monsters: {
+    tea_slime_green: 'Slime Thé Vert',
+    tea_slime_black: 'Slime Thé Noir',
+    leaf_fairy: 'Fée des Feuilles',
+    milk_cloud: 'Nuage de Lait',
+    coconut_palm: 'Crabe Coco',
+    cream_sheep: 'Mouton Crème',
+    boba_bunny: 'Lapin Boba',
+    jelly_fish: 'Méduse Gelée',
+    pudding_bear: 'Ours Pudding',
+    strawberry_sprite: 'Esprit Fraise',
+    mango_monkey: 'Singe Mangue',
+    fruit_parrot: 'Perroquet Fruit',
+    ice_beast: 'Bête de Glace',
+    snow_fox: 'Renard des Neiges',
+    frost_dragon: 'Dragon de Givre',
+    taro_monster: 'Monstre Taro',
+    shadow_slime: 'Slime d\'Ombre',
+  },
 }

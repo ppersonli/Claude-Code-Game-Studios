@@ -25,6 +25,8 @@ export interface Customer {
   locked?: boolean
   unlockCost?: number
   personalityId?: string // 关联到顾客AI性格
+  minLevel?: number      // 最低出现等级
+  patience?: number      // 基础耐心值(秒)
 }
 
 // === Achievement ===
@@ -84,6 +86,8 @@ export interface ServeResult {
   newCombo: number
   orderUsed: boolean[]
   cupUsed: boolean[]
+  speedBonus: number    // 速度奖励分数
+  speedLabel: string    // 速度标签文本
 }
 
 export interface ServeOptions {

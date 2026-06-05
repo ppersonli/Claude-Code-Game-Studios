@@ -24,6 +24,7 @@ const props = defineProps<{
   personality?: string // 顾客性格类型
   patience?: number // 当前耐心值
   maxPatience?: number // 最大耐心值
+  reaction?: 'correct' | 'wrong' | null // 实时配料反馈
 }>()
 
 const moodEmoji = ref('😊')
@@ -98,6 +99,14 @@ onUnmounted(() => {
           class="customer-avatar"
           :class="{ [mood]: true }"
         >
+        
+        <!-- Reaction bubble (Task 4) -->
+        <div class="reaction-bubble correct" v-if="reaction === 'correct'">
+          <span>✅</span>
+        </div>
+        <div class="reaction-bubble wrong" v-else-if="reaction === 'wrong'">
+          <span>❓</span>
+        </div>
         
         <!-- 情绪表情叠加 -->
         <div class="mood-overlay" v-if="patience !== undefined && maxPatience !== undefined">
@@ -367,5 +376,34 @@ onUnmounted(() => {
   0% { transform: scale(0) rotate(0deg); }
   50% { transform: scale(1.5) rotate(180deg); }
   100% { transform: scale(1) rotate(360deg); }
+}
+
+/* Reaction bubble (Task 4) */
+.reaction-bubble {
+  position: absolute;
+  top: -16px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.9em;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  animation: reaction-pop 0.5s ease forwards;
+  z-index: 5;
+}
+.reaction-bubble.correct {
+  background: rgba(76, 175, 80, 0.95);
+}
+.reaction-bubble.wrong {
+  background: rgba(244, 67, 54, 0.95);
+}
+@keyframes reaction-pop {
+  0% { transform: translateX(-50%) scale(0); opacity: 0; }
+  40% { transform: translateX(-50%) scale(1.3); opacity: 1; }
+  100% { transform: translateX(-50%) scale(1) translateY(-12px); opacity: 0; }
 }
 </style>

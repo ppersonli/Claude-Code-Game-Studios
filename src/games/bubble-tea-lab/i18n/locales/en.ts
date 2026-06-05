@@ -15,6 +15,7 @@ export default {
     themes: '🎨 Theme Shop',
     recipe: '📖 Recipe Book',
     decor: '🏪 Shop Decor',
+    expedition: '🗺️ Expedition',
     serve: 'Serve Drink 🧋',
     reset: 'Clear Cup',
     back: 'Back',
@@ -327,6 +328,22 @@ export default {
     dailyReward: '📅 Daily Reward +{amount}💰',
     doubleCoins: '🎬 Double Coins! +{amount}',
     achievement: '🏆 {name}!',
+    customerLeft: '💢 Customer left! Combo lost, -10 coins',
+    luckyIngredient: 'Lucky Ingredient',
+  },
+  
+  // 随机事件
+  randomEvents: {
+    tip_storm: 'Tip Storm',
+    time_freeze: 'Time Freeze',
+    double_order: 'Double Order',
+    speed_rush: 'Speed Rush',
+    lucky_ingredient: 'Lucky Ingredient',
+    tip_storm_desc: 'Next 2 cups tips x2!',
+    time_freeze_desc: 'Patience frozen for 1 cup!',
+    double_order_desc: 'Double ingredients, double score!',
+    speed_rush_desc: 'Finish in 3s for +50 bonus!',
+    lucky_ingredient_desc: 'Lucky ingredient gives +20 bonus!',
   },
   
   // 每日挑战
@@ -349,4 +366,53 @@ export default {
   
   // 语言切换
   language: 'Language',
+
+  // 探险
+  expedition: {
+    title: 'Monster Expedition',
+    dailyFirstBonus: 'Daily first: drops x2!',
+    startBattle: 'Start Battle',
+    noStamina: 'No stamina',
+    tapToAttack: 'TAP TAP TAP! 👊',
+    expeditionComplete: 'Expedition Complete!',
+    monstersDefeated: 'Defeated',
+    maxCombo: 'Max Combo',
+    totalDamage: 'Total Damage',
+    dailyDropsDoubled: 'Daily drops doubled!',
+    itemsObtained: 'Items Obtained',
+    noDrops: 'No items obtained this time...',
+    collect: 'Collect',
+    bestiary: 'Bestiary',
+  },
+
+  // 探险区域
+  zones: {
+    tea_garden: 'Tea Garden',
+    ranch: 'Milk Ranch',
+    candy_cave: 'Candy Cave',
+    orchard: 'Fruit Orchard',
+    ice_field: 'Ice Field',
+    abyss: 'The Abyss',
+  },
+
+  // 怪兽
+  monsters: {
+    tea_slime_green: 'Green Tea Slime',
+    tea_slime_black: 'Black Tea Slime',
+    leaf_fairy: 'Leaf Fairy',
+    milk_cloud: 'Milk Cloud',
+    coconut_palm: 'Coconut Crab',
+    cream_sheep: 'Cream Sheep',
+    boba_bunny: 'Boba Bunny',
+    jelly_fish: 'Jellyfish',
+    pudding_bear: 'Pudding Bear',
+    strawberry_sprite: 'Strawberry Sprite',
+    mango_monkey: 'Mango Monkey',
+    fruit_parrot: 'Fruit Parrot',
+    ice_beast: 'Ice Beast',
+    snow_fox: 'Snow Fox',
+    frost_dragon: 'Frost Dragon',
+    taro_monster: 'Taro Monster',
+    shadow_slime: 'Shadow Slime',
+  },
 }
