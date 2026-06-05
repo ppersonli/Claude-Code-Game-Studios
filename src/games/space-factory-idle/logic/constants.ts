@@ -14,8 +14,12 @@ export const CONSTANTS = {
   OFFLINE_EFFICIENCY: 0.5,
   /** Maximum offline earnings cap (8 hours) */
   MAX_OFFLINE_HOURS: 8,
-  /** Inflation rate per hour of play time */
+  /** Inflation rate per hour of play time (legacy) */
   INFLATION_RATE_PER_HOUR: 0.01,
+  /** Inflation rate per minute of play time (design doc: 5%/min) */
+  INFLATION_RATE_PER_MIN: 0.05,
+  /** Inflation floor — prices never drop below this fraction of base price */
+  INFLATION_FLOOR: 0.1,
   /** Game tick interval in ms */
   TICK_INTERVAL: 1000,
   /** Combo window in ms (3 seconds to chain clicks) */
@@ -55,13 +59,14 @@ export function calcCost(baseCost: number, costMultiplier: number, level: number
 
 /**
  * Calculate output per tick for a production line.
- * output = baseOutput * levelMult * upgradeMult * planetMult * prestigeMult
+ * Design doc: output = baseOutput × (1 + factoryLevel × 0.1) × (1 + lineLevel × 0.2) × planetMult × prestigeMult
  *
  * @param baseOutput - Base output of the recipe
  * @param level - Production line level (1-based)
  * @param upgradeMult - Upgrade multiplier (1.0 = no upgrades)
  * @param planetMult - Planet multiplier (1.0 = earth)
  * @param prestigeMult - Prestige multiplier (1.0 = no prestige)
+ * @param factoryLevel - Factory level (default 1)
  * @returns Output per tick (not floored, for precision)
  */
 export function calcOutput(
@@ -70,9 +75,11 @@ export function calcOutput(
   upgradeMult: number,
   planetMult: number,
   prestigeMult: number,
+  factoryLevel: number = 1,
 ): number {
-  const levelMult = 1 + (level - 1) * 0.5
-  return baseOutput * levelMult * upgradeMult * planetMult * prestigeMult
+  const factoryMult = 1 + factoryLevel * 0.1
+  const lineMult = 1 + level * 0.2
+  return baseOutput * factoryMult * lineMult * upgradeMult * planetMult * prestigeMult
 }
 
 /**
@@ -99,14 +106,17 @@ export function calcPrestigeThreshold(level: number): number {
 }
 
 /**
- * Calculate inflation multiplier based on play time.
- * inflation = 1 + (totalPlayTimeSeconds / 3600) * INFLATION_RATE_PER_HOUR
+ * Calculate inflation discount factor based on play time.
+ * Design doc: currentPrice = basePrice × max(0.1, 1 - floor(totalPlayTime/60) × 0.05)
  *
- * Higher inflation means items sell for less (prices decrease over time).
+ * Returns a factor between INFLATION_FLOOR (0.1) and 1.0.
+ * Multiply base price by this factor to get current price.
  *
  * @param totalPlayTimeSeconds - Total play time in seconds
- * @returns Inflation multiplier (1.0 = no inflation)
+ * @returns Inflation discount factor (0.1 to 1.0)
  */
 export function calcInflation(totalPlayTimeSeconds: number): number {
-  return 1 + (totalPlayTimeSeconds / 3600) * CONSTANTS.INFLATION_RATE_PER_HOUR
+  const minutesPlayed = Math.floor(totalPlayTimeSeconds / 60)
+  const discount = 1 - minutesPlayed * CONSTANTS.INFLATION_RATE_PER_MIN
+  return Math.max(CONSTANTS.INFLATION_FLOOR, discount)
 }

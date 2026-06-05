@@ -32,6 +32,7 @@ function makeState(overrides: Partial<GameState> = {}): GameState {
     prestigeLevel: 0,
     prestigeCount: 0,
     prestigeMult: 1,
+    factoryLevel: 1,
     productionLines: {
       earth: [makeLine()],
     },
@@ -90,12 +91,16 @@ describe('production', () => {
     })
 
     it('should scale output with line level', () => {
-      const state1 = makeState()
-      state1.productionLines.earth[0].level = 1
-      const state2 = makeState()
-      state2.productionLines.earth[0].level = 3
+      // Use electronics (baseOutput=3) so floor() doesn't clamp to 1
+      const state1 = makeState({
+        productionLines: { earth: [makeLine({ recipeId: 'electronics', level: 1 })] },
+        unlockedRecipes: ['ore-smelt', 'electronics'],
+      })
+      const state2 = makeState({
+        productionLines: { earth: [makeLine({ recipeId: 'electronics', level: 3 })] },
+        unlockedRecipes: ['ore-smelt', 'electronics'],
+      })
 
-      // Run ticks and compare stock
       processProductionTick(state1)
       processProductionTick(state2)
       // Level 3 output > Level 1 output

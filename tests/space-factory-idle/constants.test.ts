@@ -91,43 +91,52 @@ describe('constants', () => {
   })
 
   describe('calcOutput', () => {
-    it('should return baseOutput at level 1 with all mults = 1', () => {
-      expect(calcOutput(10, 1, 1, 1, 1)).toBe(10)
+    it('should return baseOutput * factoryMult * lineMult at level 1, factoryLevel 1', () => {
+      // (1 + 1*0.1) * (1 + 1*0.2) = 1.1 * 1.2 = 1.32
+      expect(calcOutput(10, 1, 1, 1, 1, 1)).toBeCloseTo(10 * 1.1 * 1.2)
     })
 
-    it('should scale with level (levelMult = 1 + (level-1)*0.5)', () => {
-      // Level 1: 10 * 1.0 * 1 * 1 * 1 = 10
-      // Level 2: 10 * 1.5 * 1 * 1 * 1 = 15
-      // Level 3: 10 * 2.0 * 1 * 1 * 1 = 20
-      expect(calcOutput(10, 1, 1, 1, 1)).toBe(10)
-      expect(calcOutput(10, 2, 1, 1, 1)).toBe(15)
-      expect(calcOutput(10, 3, 1, 1, 1)).toBe(20)
+    it('should scale with line level (lineMult = 1 + level*0.2)', () => {
+      // factoryLevel=0 to isolate lineLevel
+      // Level 1: 10 * 1.0 * 1.2 = 12
+      // Level 2: 10 * 1.0 * 1.4 = 14
+      // Level 3: 10 * 1.0 * 1.6 = 16
+      expect(calcOutput(10, 1, 1, 1, 1, 0)).toBeCloseTo(12)
+      expect(calcOutput(10, 2, 1, 1, 1, 0)).toBeCloseTo(14)
+      expect(calcOutput(10, 3, 1, 1, 1, 0)).toBeCloseTo(16)
+    })
+
+    it('should scale with factory level (factoryMult = 1 + factoryLevel*0.1)', () => {
+      // lineLevel=0 to isolate factoryLevel
+      expect(calcOutput(10, 0, 1, 1, 1, 1)).toBeCloseTo(11)
+      expect(calcOutput(10, 0, 1, 1, 1, 3)).toBeCloseTo(13)
+      expect(calcOutput(10, 0, 1, 1, 1, 5)).toBeCloseTo(15)
     })
 
     it('should multiply by upgradeMult', () => {
-      // baseOutput=10, level=1, upgradeMult=2 → 10 * 1.0 * 2 * 1 * 1 = 20
-      expect(calcOutput(10, 1, 2, 1, 1)).toBe(20)
+      expect(calcOutput(10, 1, 2, 1, 1, 1)).toBeCloseTo(10 * 1.1 * 1.2 * 2)
     })
 
     it('should multiply by planetMult', () => {
-      // baseOutput=10, level=1, planetMult=1.5 → 10 * 1.0 * 1 * 1.5 * 1 = 15
-      expect(calcOutput(10, 1, 1, 1.5, 1)).toBe(15)
+      expect(calcOutput(10, 1, 1, 1.5, 1, 1)).toBeCloseTo(10 * 1.1 * 1.2 * 1.5)
     })
 
     it('should multiply by prestigeMult', () => {
-      // baseOutput=10, level=1, prestigeMult=3 → 10 * 1.0 * 1 * 1 * 3 = 30
-      expect(calcOutput(10, 1, 1, 1, 3)).toBe(30)
+      expect(calcOutput(10, 1, 1, 1, 3, 1)).toBeCloseTo(10 * 1.1 * 1.2 * 3)
     })
 
-    it('should combine all multipliers', () => {
-      // baseOutput=10, level=3, upgradeMult=2, planetMult=1.5, prestigeMult=2
-      // levelMult = 1 + (3-1)*0.5 = 2.0
-      // 10 * 2.0 * 2 * 1.5 * 2 = 120
-      expect(calcOutput(10, 3, 2, 1.5, 2)).toBe(120)
+    it('should combine all multipliers (design doc formula)', () => {
+      // 10 * (1 + 3*0.1) * (1 + 2*0.2) * 2 * 1.5 * 2
+      // = 10 * 1.3 * 1.4 * 2 * 1.5 * 2 = 109.2
+      expect(calcOutput(10, 2, 2, 1.5, 2, 3)).toBeCloseTo(10 * 1.3 * 1.4 * 2 * 1.5 * 2)
     })
 
     it('should handle baseOutput of 0', () => {
-      expect(calcOutput(0, 5, 2, 1.5, 1)).toBe(0)
+      expect(calcOutput(0, 5, 2, 1.5, 1, 3)).toBe(0)
+    })
+
+    it('should default factoryLevel to 1', () => {
+      expect(calcOutput(10, 1, 1, 1, 1)).toBeCloseTo(10 * 1.1 * 1.2)
     })
   })
 
@@ -191,40 +200,45 @@ describe('constants', () => {
 
   describe('calcInflation', () => {
     it('should return 1.0 at 0 play time', () => {
-      expect(calcInflation(0)).toBe(1)
+      expect(calcInflation(0)).toBeCloseTo(1.0)
     })
 
-    it('should increase over time', () => {
-      const inf1 = calcInflation(3600) // 1 hour
-      const inf2 = calcInflation(7200) // 2 hours
-      expect(inf1).toBeGreaterThan(1)
-      expect(inf2).toBeGreaterThan(inf1)
+    it('should decrease over time (discount factor)', () => {
+      const inf1 = calcInflation(60)   // 1 minute
+      const inf2 = calcInflation(120)  // 2 minutes
+      expect(inf1).toBeLessThan(1)
+      expect(inf2).toBeLessThan(inf1)
     })
 
-    it('should be 1.01 after 1 hour (1% per hour)', () => {
-      // 1 + (3600 / 3600) * 0.01 = 1.01
-      expect(calcInflation(3600)).toBeCloseTo(1.01)
+    it('should be 0.95 after 1 minute (5% per min)', () => {
+      // floor(60/60) = 1 → 1 - 1*0.05 = 0.95
+      expect(calcInflation(60)).toBeCloseTo(0.95)
     })
 
-    it('should be 1.05 after 5 hours', () => {
-      // 1 + (18000 / 3600) * 0.01 = 1 + 5 * 0.01 = 1.05
-      expect(calcInflation(18000)).toBeCloseTo(1.05)
+    it('should be 0.50 after 10 minutes', () => {
+      // floor(600/60) = 10 → 1 - 10*0.05 = 0.50
+      expect(calcInflation(600)).toBeCloseTo(0.50)
     })
 
-    it('should reduce sell price (higher inflation = lower effective price)', () => {
-      const inf0 = calcInflation(0)
-      const inf10h = calcInflation(36000) // 10 hours
-      // price / inflation → higher inflation means lower price
-      const price0 = 100 / inf0
-      const price10h = 100 / inf10h
-      expect(price10h).toBeLessThan(price0)
+    it('should floor at 0.10 (never below 10% of base price)', () => {
+      // floor(3600/60) = 60 → 1 - 60*0.05 = -2.0 → clamped to 0.1
+      expect(calcInflation(3600)).toBeCloseTo(0.10)
     })
 
-    it('should not increase too aggressively (after 1 hour only 1% reduction)', () => {
-      const inflation = calcInflation(3600)
-      expect(inflation).toBeCloseTo(1.01)
-      // 100 / 1.01 ≈ 99.01 — only 1% reduction, manageable
-      expect(100 / inflation).toBeGreaterThan(98)
+    it('should multiply with base price to reduce sell price over time', () => {
+      const factor0 = calcInflation(0)
+      const factor10m = calcInflation(600)
+      // price * factor → lower factor means lower price
+      const price0 = 100 * factor0
+      const price10m = 100 * factor10m
+      expect(price10m).toBeLessThan(price0)
+    })
+
+    it('should not reduce too aggressively (after 1 min only 5% reduction)', () => {
+      const factor = calcInflation(60)
+      expect(factor).toBeCloseTo(0.95)
+      // 100 * 0.95 = 95 — only 5% reduction, manageable
+      expect(100 * factor).toBeGreaterThan(90)
     })
   })
 })

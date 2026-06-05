@@ -4,13 +4,13 @@ import { calcPrestigeStardust, calcPrestigeThreshold } from '../src/games/space-
 import { RECIPES } from '../src/games/space-factory-idle/data/recipes'
 
 describe('GameScene integration — new GameState interface', () => {
-  it('createDefaultState returns productionLines instead of factoryLevel', () => {
+  it('createDefaultState returns productionLines and factoryLevel', () => {
     const state = createDefaultState()
     expect(state.productionLines).toBeDefined()
     expect(state.productionLines.earth).toBeDefined()
     expect(state.productionLines.earth.length).toBeGreaterThan(0)
-    // Old interface had factoryLevel — new one should NOT have it
-    expect((state as any).factoryLevel).toBeUndefined()
+    // factoryLevel is a design doc requirement (+10% production per level)
+    expect(state.factoryLevel).toBe(1)
   })
 
   it('createDefaultState has coins instead of separate stardust field', () => {

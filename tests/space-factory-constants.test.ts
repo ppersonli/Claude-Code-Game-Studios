@@ -38,36 +38,45 @@ describe('constants.ts — pure math functions', () => {
   })
 
   describe('calcOutput', () => {
-    it('returns baseOutput at level 1 with all multipliers 1', () => {
-      expect(calcOutput(10, 1, 1, 1, 1)).toBe(10)
+    it('applies design doc formula: baseOutput * factoryMult * lineMult * upgradeMult * planetMult * prestigeMult', () => {
+      // factoryLevel=1, lineLevel=1: (1+0.1)*(1+0.2) = 1.32
+      expect(calcOutput(10, 1, 1, 1, 1, 1)).toBeCloseTo(13.2)
     })
 
-    it('applies level multiplier: level 2 = 1.5x', () => {
-      // levelMult = 1 + (2-1)*0.5 = 1.5
-      expect(calcOutput(10, 2, 1, 1, 1)).toBe(15)
+    it('applies line level multiplier: 1 + level * 0.2', () => {
+      // factoryLevel=0 to isolate
+      expect(calcOutput(10, 1, 1, 1, 1, 0)).toBeCloseTo(12)  // 10 * 1.2
+      expect(calcOutput(10, 2, 1, 1, 1, 0)).toBeCloseTo(14)  // 10 * 1.4
+      expect(calcOutput(10, 3, 1, 1, 1, 0)).toBeCloseTo(16)  // 10 * 1.6
     })
 
-    it('applies level multiplier: level 3 = 2.0x', () => {
-      // levelMult = 1 + (3-1)*0.5 = 2.0
-      expect(calcOutput(10, 3, 1, 1, 1)).toBe(20)
+    it('applies factory level multiplier: 1 + factoryLevel * 0.1', () => {
+      // lineLevel=0 to isolate
+      expect(calcOutput(10, 0, 1, 1, 1, 1)).toBeCloseTo(11)  // 10 * 1.1
+      expect(calcOutput(10, 0, 1, 1, 1, 3)).toBeCloseTo(13)  // 10 * 1.3
     })
 
     it('applies upgrade multiplier', () => {
-      expect(calcOutput(10, 1, 1.5, 1, 1)).toBe(15)
+      expect(calcOutput(10, 1, 1.5, 1, 1, 1)).toBeCloseTo(13.2 * 1.5)
     })
 
     it('applies planet multiplier', () => {
-      expect(calcOutput(10, 1, 1, 1.2, 1)).toBe(12)
+      expect(calcOutput(10, 1, 1, 1.2, 1, 1)).toBeCloseTo(13.2 * 1.2)
     })
 
     it('applies prestige multiplier', () => {
-      expect(calcOutput(10, 1, 1, 1, 2)).toBe(20)
+      expect(calcOutput(10, 1, 1, 1, 2, 1)).toBeCloseTo(13.2 * 2)
     })
 
-    it('combines all multipliers', () => {
-      // 10 * 1.5(level) * 1.2(upgrade) * 1.5(planet) * 1.1(prestige) = 29.7
-      const result = calcOutput(10, 2, 1.2, 1.5, 1.1)
-      expect(result).toBeCloseTo(29.7, 0)
+    it('combines all multipliers (design doc formula)', () => {
+      // 10 * (1+2*0.1) * (1+2*0.2) * 1.2 * 1.5 * 1.1
+      // = 10 * 1.2 * 1.4 * 1.2 * 1.5 * 1.1 = 33.264
+      const result = calcOutput(10, 2, 1.2, 1.5, 1.1, 2)
+      expect(result).toBeCloseTo(33.264, 1)
+    })
+
+    it('defaults factoryLevel to 1', () => {
+      expect(calcOutput(10, 1, 1, 1, 1)).toBeCloseTo(13.2)
     })
   })
 
@@ -119,23 +128,26 @@ describe('constants.ts — pure math functions', () => {
 
   describe('calcInflation', () => {
     it('returns 1.0 at 0 play time', () => {
-      expect(calcInflation(0)).toBe(1)
+      expect(calcInflation(0)).toBeCloseTo(1.0)
     })
 
-    it('increases over time', () => {
-      const inflation1hr = calcInflation(3600) // 1 hour
-      expect(inflation1hr).toBeCloseTo(1.01, 2) // 1% per hour
+    it('decreases over time (discount factor)', () => {
+      const factor1min = calcInflation(60) // 1 minute
+      expect(factor1min).toBeCloseTo(0.95) // 1 - 1*0.05
     })
 
-    it('reduces sell price over time (higher inflation = lower effective price)', () => {
-      const inflation0 = calcInflation(0)
-      const inflation2hr = calcInflation(7200)
-      expect(inflation2hr).toBeGreaterThan(inflation0)
+    it('multiplies with base price to reduce sell price over time', () => {
+      const factor0 = calcInflation(0)
+      const factor2min = calcInflation(120)
+      // price * factor → lower factor means lower price
+      expect(100 * factor2min).toBeLessThan(100 * factor0)
     })
 
-    it('reaches 1.10 after 10 hours', () => {
-      // 1 + (36000/3600) * 0.01 = 1 + 0.10 = 1.10
-      expect(calcInflation(36000)).toBeCloseTo(1.10, 2)
+    it('floors at 0.10 after 18+ minutes', () => {
+      // floor(1080/60) = 18 → 1 - 18*0.05 = 0.1
+      expect(calcInflation(1080)).toBeCloseTo(0.10)
+      // Even at 10 hours (36000s), still 0.10
+      expect(calcInflation(36000)).toBeCloseTo(0.10)
     })
   })
 

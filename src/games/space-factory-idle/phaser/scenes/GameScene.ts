@@ -6,7 +6,7 @@ import { purchaseUpgrade, getUpgradeCost, hireEmployee, getEmployeeCost, unlockP
 import { performPrestige, canPrestige, calcEarnableStardust, getPrestigeRequirement } from '../../logic/prestige'
 import { RECIPES, getRecipesForPlanet } from '../../data/recipes'
 import { PLANETS } from '../../data/planets'
-import { CONSTANTS } from '../../logic/constants'
+import { CONSTANTS, calcInflation } from '../../logic/constants'
 
 export class GameScene extends Phaser.Scene {
   private state!: GameState
@@ -523,7 +523,37 @@ export class GameScene extends Phaser.Scene {
     }
     this.incomeText.setText(`📥 ${this.formatNum(totalOutput)}/s`)
 
-    const inflation = 1 + (this.state.totalPlayTime / 3600) * CONSTANTS.INFLATION_RATE_PER_HOUR
-    this.inflationText.setText(`📊 ${Math.round((1 / inflation) * 100)}%`)
+    const inflation = calcInflation(this.state.totalPlayTime)
+    this.inflationText.setText(`📊 ${Math.round(inflation * 100)}%`)
+  }
+
+  /**
+   * Called by Vue to refresh the scene after state changes.
+   */
+  refresh(): void {
+    this.state = loadState()
+    this.updateHUD()
+  }
+
+  /**
+   * Spawn a floating coin particle at a position.
+   */
+  spawnCoinParticle(x: number, y: number, amount: number): void {
+    const text = this.add.text(x, y, `+${amount}`, {
+      fontFamily: 'Fredoka One, cursive',
+      fontSize: '18px',
+      color: COLORS.accent || '#FFD740',
+      stroke: '#000000',
+      strokeThickness: 3,
+    }).setOrigin(0.5)
+
+    this.tweens.add({
+      targets: text,
+      y: y - 50,
+      alpha: 0,
+      duration: 1000,
+      ease: 'Power2',
+      onComplete: () => text.destroy(),
+    })
   }
 }

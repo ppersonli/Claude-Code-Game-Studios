@@ -3,7 +3,7 @@
  * Handles production ticks, selling, upgrading lines, and automation.
  */
 
-import { calcCost, CONSTANTS } from './constants'
+import { calcCost, calcOutput, calcInflation, CONSTANTS } from './constants'
 import type { GameState, ProductionLineState } from './game-state'
 import { PLANETS } from '../data/planets'
 import { RECIPES as RECIPE_ARRAY, type Recipe } from '../data/recipes'
@@ -48,11 +48,16 @@ export function processProductionTick(state: GameState): number {
       // Apply event output multiplier
       const eventMult = getEventOutputMult(state)
 
-      // Produce items with all multipliers applied
-      const baseOutput = recipe.baseOutput * (1 + (line.level - 1) * 0.5)
-      const produceAmount = Math.max(1, Math.floor(
-        baseOutput * speedMult * qualityMult * engineerBonus * directorBonus * prestigeMult * eventMult
-      ))
+      // Produce items with all multipliers applied (design doc formula)
+      const baseOutput = calcOutput(
+        recipe.baseOutput,
+        line.level,
+        speedMult * qualityMult * engineerBonus * directorBonus,
+        1, // planetMult (already in recipe pricing)
+        prestigeMult * eventMult,
+        state.factoryLevel,
+      )
+      const produceAmount = Math.max(1, Math.floor(baseOutput))
 
       // Check if stock is full
       if (line.stock >= line.maxStock) {
@@ -95,8 +100,10 @@ export function clickProduce(state: GameState, planetId: string, lineIndex: numb
   const recipe = RECIPES[line.recipeId]
   if (!recipe) return 0
 
-  // Produce items
-  const produceAmount = Math.max(1, Math.floor(recipe.baseOutput * (1 + (line.level - 1) * 0.5)))
+  // Produce items (design doc formula)
+  const produceAmount = Math.max(1, Math.floor(
+    calcOutput(recipe.baseOutput, line.level, 1, 1, 1, state.factoryLevel)
+  ))
 
   let coinsEarned = 0
 
@@ -282,12 +289,15 @@ export function recalcAllMaxStock(state: GameState): void {
 
 /**
  * Calculate coins earned from selling a line's stock.
+ * Design doc: income = basePrice × inflationFactor × actualOutput
  */
 function sellLine(state: GameState, line: ProductionLineState, planetId: string): number {
   const recipe = RECIPES[line.recipeId]
   if (!recipe) return 0
 
-  const coinsPerItem = recipe.basePrice * line.level
+  // Design doc: price = basePrice × inflation factor (not × lineLevel)
+  const inflationFactor = calcInflation(state.totalPlayTime)
+  const coinsPerItem = recipe.basePrice * inflationFactor
 
   // Apply coin multiplier upgrade
   const coinMultLevel = state.upgrades['coin-mult'] || 0
@@ -296,8 +306,5 @@ function sellLine(state: GameState, line: ProductionLineState, planetId: string)
   // Apply prestige multiplier
   const prestigeMult = state.prestigeMult
 
-  // Apply inflation (higher inflation = lower sell price)
-  const inflation = 1 + (state.totalPlayTime / 3600) * CONSTANTS.INFLATION_RATE_PER_HOUR
-
-  return Math.floor(line.stock * coinsPerItem * coinMult * prestigeMult / inflation)
+  return Math.floor(line.stock * coinsPerItem * coinMult * prestigeMult)
 }

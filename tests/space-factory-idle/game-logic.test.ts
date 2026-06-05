@@ -17,6 +17,7 @@ function makeTestState(overrides: Partial<GameState> = {}): GameState {
     prestigeLevel: 0,
     prestigeCount: 0,
     prestigeMult: 1,
+    factoryLevel: 1,
     productionLines: {
       earth: [
         { recipeId: 'ore-smelt', level: 1, stock: 0, maxStock: 10, automated: false },
@@ -589,23 +590,26 @@ describe('Event System', () => {
 
   describe('Inflation System', () => {
     it('sellStock returns fewer coins with high totalPlayTime', () => {
+      // Use metal-work (basePrice=3) so inflation doesn't floor earnings to 0
       const stateFresh = makeTestState({
         totalPlayTime: 0,
         coins: 1000,
         productionLines: {
           earth: [
-            { recipeId: 'ore-smelt', level: 1, stock: 5, maxStock: 10, automated: false },
+            { recipeId: 'metal-work', level: 1, stock: 10, maxStock: 20, automated: false },
           ],
         },
+        unlockedRecipes: ['ore-smelt', 'metal-work'],
       })
       const stateInflated = makeTestState({
-        totalPlayTime: 36000, // 10 hours
+        totalPlayTime: 1200, // 20 minutes → factor = max(0.1, 1 - 20*0.05) = 0.0 → 0.1
         coins: 1000,
         productionLines: {
           earth: [
-            { recipeId: 'ore-smelt', level: 1, stock: 5, maxStock: 10, automated: false },
+            { recipeId: 'metal-work', level: 1, stock: 10, maxStock: 20, automated: false },
           ],
         },
+        unlockedRecipes: ['ore-smelt', 'metal-work'],
       })
 
       const freshEarnings = sellStock(stateFresh, 'earth', 0)

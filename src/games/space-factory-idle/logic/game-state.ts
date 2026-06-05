@@ -28,6 +28,9 @@ export interface GameState {
   prestigeCount: number
   prestigeMult: number
 
+  // Factory level (design doc: +10% all production per level)
+  factoryLevel: number
+
   // Production lines per planet
   productionLines: Record<string, ProductionLineState[]>
 
@@ -77,6 +80,7 @@ export function createDefaultState(): GameState {
     prestigeLevel: 0,
     prestigeCount: 0,
     prestigeMult: 1,
+    factoryLevel: 1,
     productionLines: {
       earth: [
         { recipeId: 'ore-smelt', level: 1, stock: 0, maxStock: 10, automated: false },
