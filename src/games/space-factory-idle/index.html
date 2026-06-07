@@ -15,15 +15,22 @@
       height: 100vh;
       font-family: Arial, sans-serif;
     }
-    #game-container {
-      width: 100%;
-      max-width: 480px;
-      aspect-ratio: 480/854;
-    }
   </style>
 </head>
 <body>
-  <div id="game-container"></div>
+  <div id="app"></div>
+
+  <!-- CrazyGames SDK v3 -->
+  <script src="https://sdk.crazygames.com/crazygames-sdk-v3.js"></script>
+
+  <!-- Scroll / keyboard prevention for iframe embed -->
+  <script>
+    window.addEventListener("wheel", (e) => e.preventDefault(), { passive: false });
+    window.addEventListener("keydown", (e) => {
+      if (["ArrowUp", "ArrowDown", " "].includes(e.key)) e.preventDefault();
+    });
+  </script>
+
   <script type="module" src="./main.ts"></script>
 </body>
 </html>

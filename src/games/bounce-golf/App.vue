@@ -4,13 +4,36 @@
     <div v-if="screen === 'start'" class="screen start-screen">
       <h1 class="game-title">{{ t('title') }}</h1>
       <p class="tagline">{{ t('tagline') }}</p>
+      
+      <!-- Daily Challenge Card -->
+      <div class="daily-challenge-card" @click="claimDailyChallengeReward">
+        <div class="challenge-header">
+          <span class="challenge-icon">🎯</span>
+          <span class="challenge-title">Daily Challenge</span>
+          <span v-if="dailyChallengeStreak > 0" class="challenge-streak">🔥 {{ dailyChallengeStreak }}</span>
+        </div>
+        <div class="challenge-name">{{ dailyChallenge.name }}</div>
+        <div class="challenge-desc">{{ dailyChallenge.description }}</div>
+        <div class="challenge-reward">
+          <span v-if="dailyChallengeCompleted" class="challenge-claimed">✅ Claimed</span>
+          <span v-else class="challenge-reward-text">+{{ dailyChallenge.reward }} 🪙</span>
+        </div>
+      </div>
+
       <div class="menu-buttons">
         <button class="btn btn-primary" @click="startGame">{{ t('play') }}</button>
         <button class="btn btn-secondary" @click="screen = 'upgrades'">{{ t('upgrades') }}</button>
         <button class="btn btn-secondary" @click="screen = 'characters'">{{ t('characters') }}</button>
+        <button v-if="canPrestigeNow" class="btn btn-prestige" @click="screen = 'prestige'">
+          🌟 Prestige
+        </button>
         <button class="btn btn-secondary" @click="screen = 'settings'">{{ t('settings') }}</button>
       </div>
-      <div class="star-count">{{ t('stars') }}: {{ state.totalStars }}</div>
+      
+      <div class="star-count">
+        <span>⭐ {{ state.totalStars }}</span>
+        <span v-if="state.galaxyCoins > 0" class="galaxy-coins">🪙 {{ state.galaxyCoins }}</span>
+      </div>
     </div>
 
     <!-- Game Screen -->
@@ -94,6 +117,31 @@
       </div>
     </div>
 
+    <!-- Prestige Screen -->
+    <div v-else-if="screen === 'prestige'" class="screen prestige-screen">
+      <div class="screen-header">
+        <button class="btn-back" @click="screen = 'start'">←</button>
+        <h2>🌟 Prestige</h2>
+      </div>
+      <div class="prestige-content">
+        <div class="prestige-info">
+          <p>Reset your progress to earn <strong>Galaxy Coins</strong> (🪙)</p>
+          <p>Galaxy Coins can be used to unlock special characters!</p>
+        </div>
+        <div class="prestige-reward">
+          <div class="reward-label">You will receive:</div>
+          <div class="reward-amount">🪙 {{ 10 + state.completedLevels.length }} Galaxy Coins</div>
+        </div>
+        <div class="prestige-current">
+          <div>Current Galaxy Coins: 🪙 {{ state.galaxyCoins }}</div>
+          <div>Prestige Count: {{ state.prestigeCount }}</div>
+        </div>
+        <button class="btn btn-prestige" @click="showPrestigeConfirm = true">
+          🌟 Prestige Now
+        </button>
+      </div>
+    </div>
+
     <!-- Pause Overlay -->
     <div v-if="paused" class="overlay">
       <div class="overlay-panel">
@@ -126,11 +174,24 @@
         </div>
       </div>
     </div>
+
+    <!-- Prestige Confirm Overlay -->
+    <div v-if="showPrestigeConfirm" class="overlay">
+      <div class="overlay-panel prestige-confirm-panel">
+        <h2>🌟 Are you sure?</h2>
+        <p>This will reset your progress but grant you Galaxy Coins.</p>
+        <p class="reward-preview">+{{ 10 + state.completedLevels.length }} 🪙</p>
+        <div class="result-buttons">
+          <button class="btn btn-secondary" @click="showPrestigeConfirm = false">Cancel</button>
+          <button class="btn btn-prestige" @click="doPrestige">Prestige!</button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, onUnmounted, nextTick } from 'vue'
+import { ref, reactive, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import Phaser from 'phaser'
 import { useI18n } from './i18n'
 import { GAME_CONFIG, type UpgradeKey, type CharacterId } from './config'
@@ -140,10 +201,22 @@ import {
   canAffordUpgrade,
   purchaseUpgrade,
   completeLevel,
+  canPrestige,
+  prestige,
   saveGame,
   loadGame,
   type GameState,
 } from './logic/game-state'
+import {
+  getDailyChallenge,
+  isDailyChallengeCompleted,
+  completeDailyChallenge,
+  getDailyChallengeStreak,
+} from './logic/daily-challenge'
+import {
+  canUnlockCharacter,
+  unlockCharacter,
+} from './logic/character-unlock'
 import { createPhaserConfig } from './phaser/config'
 import { LEVELS } from './data/levels'
 import { AdManager } from '../../services/AdManager'
@@ -151,7 +224,7 @@ import { AdManager } from '../../services/AdManager'
 const { t, locale: currentLocale, setLocale, SUPPORTED_LOCALES } = useI18n()
 const adManager = AdManager.getInstance()
 
-type Screen = 'start' | 'game' | 'upgrades' | 'characters' | 'settings'
+type Screen = 'start' | 'game' | 'upgrades' | 'characters' | 'settings' | 'prestige'
 
 const screen = ref<Screen>('start')
 const state = reactive<GameState>(loadGame() ?? createInitialState())
@@ -168,6 +241,15 @@ const resultStars = ref<boolean[]>([false, false, false])
 // Pending result (stored until player clicks NEXT or RETRY)
 const pendingResult = ref<{ levelId: number; strokes: number; stars: boolean[] } | null>(null)
 const bonusStarClaimed = ref(false)
+
+// Prestige state
+const showPrestigeConfirm = ref(false)
+
+// Daily challenge state
+const dailyChallenge = computed(() => getDailyChallenge())
+const dailyChallengeCompleted = computed(() => isDailyChallengeCompleted(state as GameState))
+const dailyChallengeStreak = computed(() => getDailyChallengeStreak(state as GameState))
+const canPrestigeNow = computed(() => canPrestige(state as GameState))
 
 function save() {
   saveGame(state as GameState)
@@ -306,6 +388,22 @@ function changeLocale(e: Event) {
   setLocale(val)
 }
 
+// Prestige
+function doPrestige() {
+  Object.assign(state, prestige(state as GameState))
+  save()
+  showPrestigeConfirm.value = false
+  screen.value = 'start'
+}
+
+// Daily challenge
+function claimDailyChallengeReward() {
+  if (!dailyChallengeCompleted.value) {
+    Object.assign(state, completeDailyChallenge(state as GameState))
+    save()
+  }
+}
+
 onUnmounted(() => {
   game?.destroy(true)
   game = null
@@ -362,6 +460,77 @@ onUnmounted(() => {
   margin-top: 10px;
   font-size: 16px;
   color: #ffd700;
+  display: flex;
+  gap: 16px;
+  align-items: center;
+}
+
+.galaxy-coins {
+  color: #00d4ff;
+}
+
+/* Daily Challenge Card */
+.daily-challenge-card {
+  background: rgba(255, 215, 0, 0.1);
+  border: 1px solid rgba(255, 215, 0, 0.3);
+  border-radius: 12px;
+  padding: 16px;
+  width: 280px;
+  cursor: pointer;
+  transition: transform 0.2s, border-color 0.2s;
+}
+
+.daily-challenge-card:hover {
+  transform: scale(1.02);
+  border-color: rgba(255, 215, 0, 0.5);
+}
+
+.challenge-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.challenge-icon {
+  font-size: 20px;
+}
+
+.challenge-title {
+  font-family: 'Fredoka', sans-serif;
+  font-size: 16px;
+  color: #ffd700;
+  flex: 1;
+}
+
+.challenge-streak {
+  font-size: 14px;
+  color: #ff6b35;
+}
+
+.challenge-name {
+  font-family: 'Fredoka', sans-serif;
+  font-size: 14px;
+  color: #fff;
+  margin-bottom: 4px;
+}
+
+.challenge-desc {
+  font-size: 12px;
+  color: #aaa;
+  margin-bottom: 8px;
+}
+
+.challenge-reward {
+  font-size: 14px;
+}
+
+.challenge-reward-text {
+  color: #ffd700;
+}
+
+.challenge-claimed {
+  color: #00ff88;
 }
 
 /* Buttons */
@@ -388,6 +557,16 @@ onUnmounted(() => {
   background: rgba(255, 255, 255, 0.1);
   color: #fff;
   border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.btn-prestige {
+  background: linear-gradient(135deg, #7b2ff7, #ff2d95);
+  color: #fff;
+  box-shadow: 0 4px 15px rgba(123, 47, 247, 0.3);
+}
+
+.btn-prestige:hover {
+  box-shadow: 0 6px 20px rgba(123, 47, 247, 0.5);
 }
 
 .btn-buy {
@@ -543,6 +722,68 @@ onUnmounted(() => {
 .settings-list {
   width: 100%;
   max-width: 400px;
+}
+
+/* Prestige Screen */
+.prestige-screen {
+  padding: 20px;
+  overflow-y: auto;
+}
+
+.prestige-content {
+  max-width: 400px;
+  text-align: center;
+}
+
+.prestige-info {
+  margin-bottom: 24px;
+  font-size: 16px;
+  color: #aaa;
+}
+
+.prestige-info strong {
+  color: #00d4ff;
+}
+
+.prestige-reward {
+  background: rgba(123, 47, 247, 0.2);
+  border: 1px solid rgba(123, 47, 247, 0.4);
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+.reward-label {
+  font-size: 14px;
+  color: #aaa;
+  margin-bottom: 8px;
+}
+
+.reward-amount {
+  font-family: 'Fredoka', sans-serif;
+  font-size: 28px;
+  color: #00d4ff;
+}
+
+.prestige-current {
+  margin-bottom: 24px;
+  font-size: 14px;
+  color: #888;
+}
+
+.prestige-current div {
+  margin-bottom: 4px;
+}
+
+.prestige-confirm-panel {
+  max-width: 320px;
+}
+
+.reward-preview {
+  font-family: 'Fredoka', sans-serif;
+  font-size: 24px;
+  color: #00d4ff;
+  margin: 16px 0;
 }
 
 .setting-row {

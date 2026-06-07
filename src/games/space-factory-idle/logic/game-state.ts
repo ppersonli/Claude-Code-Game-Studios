@@ -199,6 +199,7 @@ export function calcTotalOutputPerSec(state: GameState): number {
         1, // upgradeMult (simplified)
         planet.specialBonus,
         state.prestigeMult,
+        state.factoryLevel, // BUG FIX: was hardcoded to 1
       )
       total += output
     }

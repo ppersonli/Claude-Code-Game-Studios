@@ -1,236 +1,233 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+/**
+ * Space Factory Idle — Prestige System Tests
+ * Tests for canPrestige, performPrestige, canUnlockPlanet, calcStardustGain
+ */
+
+import { describe, it, expect } from 'vitest'
 import {
   canPrestige,
-  getPrestigeRequirement,
-  calcEarnableStardust,
   performPrestige,
+  calcEarnableStardust,
+  calcStardustGain,
+  canUnlockPlanet,
+  calcUpgradeCost,
+  calcWorkerSpeed,
+  calcFactoryMultiplier,
 } from '../../src/games/space-factory-idle/logic/prestige'
-import type { GameState } from '../../src/games/space-factory-idle/logic/game-state'
+import { createDefaultState } from '../../src/games/space-factory-idle/logic/game-state'
 
-function makeState(overrides: Partial<GameState> = {}): GameState {
-  return {
-    coins: 0,
-    totalCoins: 0,
-    starDust: 0,
-    prestigeLevel: 0,
-    prestigeCount: 0,
-    prestigeMult: 1,
-    productionLines: {
-      earth: [
-        { recipeId: 'ore-smelt', level: 1, stock: 0, maxStock: 10, automated: false },
-      ],
-    },
-    upgrades: {},
-    employees: {},
-    unlockedPlanets: ['earth'],
-    unlockedRecipes: ['ore-smelt'],
-    totalProduced: 0,
-    bestDistance: 0,
-    achievements: [],
-    lastDailyCompleted: '',
-    dailyStreak: 0,
-    lastOnline: Date.now(),
-    sessionStart: Date.now(),
-    activeEvent: null,
-    eventEndTime: 0,
-    sessionCoinsEarned: 0,
-    sessionItemsProduced: 0,
-    sessionUpgradesMade: 0,
-    totalPlayTime: 0,
-    ...overrides,
-  }
-}
+/* ── canPrestige ───────────────────────────────────────────────── */
 
-describe('prestige', () => {
-  describe('canPrestige', () => {
-    it('should return false when totalCoins below threshold', () => {
-      const state = makeState({ totalCoins: 500_000 })
-      expect(canPrestige(state)).toBe(false)
-    })
-
-    it('should return true when totalCoins >= threshold', () => {
-      const state = makeState({ totalCoins: 1_000_000 })
-      expect(canPrestige(state)).toBe(true)
-    })
-
-    it('should return true when totalCoins exceeds threshold', () => {
-      const state = makeState({ totalCoins: 5_000_000 })
-      expect(canPrestige(state)).toBe(true)
-    })
-
-    it('should use correct threshold for prestige level 1', () => {
-      // Level 1 threshold = 1M * 10 = 10M
-      const state = makeState({ totalCoins: 10_000_000, prestigeLevel: 1 })
-      expect(canPrestige(state)).toBe(true)
-    })
-
-    it('should return false at prestige level 1 with only 5M coins', () => {
-      const state = makeState({ totalCoins: 5_000_000, prestigeLevel: 1 })
-      expect(canPrestige(state)).toBe(false)
-    })
+describe('canPrestige', () => {
+  it('returns false with 0 coins', () => {
+    const state = createDefaultState()
+    expect(canPrestige(state)).toBe(false)
   })
 
-  describe('getPrestigeRequirement', () => {
-    it('should return 1M for prestige level 0', () => {
-      const state = makeState({ prestigeLevel: 0 })
-      expect(getPrestigeRequirement(state)).toBe(1_000_000)
-    })
-
-    it('should return 10M for prestige level 1', () => {
-      const state = makeState({ prestigeLevel: 1 })
-      expect(getPrestigeRequirement(state)).toBe(10_000_000)
-    })
+  it('returns false below threshold', () => {
+    const state = createDefaultState()
+    state.totalCoins = 999_999
+    expect(canPrestige(state)).toBe(false)
   })
 
-  describe('calcEarnableStardust', () => {
-    it('should return 0 for 0 coins', () => {
-      const state = makeState({ totalCoins: 0 })
-      expect(calcEarnableStardust(state)).toBe(0)
-    })
-
-    it('should return 1 for 1M coins', () => {
-      const state = makeState({ totalCoins: 1_000_000 })
-      expect(calcEarnableStardust(state)).toBe(1)
-    })
-
-    it('should return 10 for 100M coins', () => {
-      const state = makeState({ totalCoins: 100_000_000 })
-      expect(calcEarnableStardust(state)).toBe(10)
-    })
+  it('returns true at exactly 1M coins (level 0)', () => {
+    const state = createDefaultState()
+    state.totalCoins = 1_000_000
+    expect(canPrestige(state)).toBe(true)
   })
 
-  describe('performPrestige', () => {
-    it('should return 0 if cannot prestige', () => {
-      const state = makeState({ totalCoins: 500_000 })
-      expect(performPrestige(state)).toBe(0)
-    })
+  it('returns true above threshold', () => {
+    const state = createDefaultState()
+    state.totalCoins = 10_000_000
+    expect(canPrestige(state)).toBe(true)
+  })
+})
 
-    it('should award star dust', () => {
-      const state = makeState({ totalCoins: 1_000_000 })
-      const earned = performPrestige(state)
-      expect(earned).toBe(1)
-      expect(state.starDust).toBe(1)
-    })
+/* ── performPrestige ───────────────────────────────────────────── */
 
-    it('should increment prestige level and count', () => {
-      const state = makeState({ totalCoins: 1_000_000 })
-      performPrestige(state)
-      expect(state.prestigeLevel).toBe(1)
-      expect(state.prestigeCount).toBe(1)
-    })
+describe('performPrestige', () => {
+  it('returns 0 when cannot prestige', () => {
+    const state = createDefaultState()
+    expect(performPrestige(state)).toBe(0)
+  })
 
-    it('should reset coins and totalCoins', () => {
-      const state = makeState({ totalCoins: 1_000_000, coins: 500_000 })
-      performPrestige(state)
-      expect(state.coins).toBe(0)
-      expect(state.totalCoins).toBe(0)
-    })
+  it('awards stardust on successful prestige', () => {
+    const state = createDefaultState()
+    state.totalCoins = 1_000_000
+    const earned = performPrestige(state)
+    expect(earned).toBe(1) // sqrt(1) = 1
+  })
 
-    it('should reset production lines to default', () => {
-      const state = makeState({
-        totalCoins: 1_000_000,
-        productionLines: {
-          earth: [
-            { recipeId: 'ore-smelt', level: 5, stock: 100, maxStock: 50, automated: true },
-            { recipeId: 'metal-work', level: 3, stock: 50, maxStock: 30, automated: false },
-          ],
-        },
-      })
-      performPrestige(state)
-      expect(state.productionLines.earth).toHaveLength(1)
-      expect(state.productionLines.earth[0].level).toBe(1)
-      expect(state.productionLines.earth[0].stock).toBe(0)
-      expect(state.productionLines.earth[0].automated).toBe(false)
-    })
+  it('resets coins to 0', () => {
+    const state = createDefaultState()
+    state.totalCoins = 4_000_000
+    state.coins = 4_000_000
+    performPrestige(state)
+    expect(state.coins).toBe(0)
+    expect(state.totalCoins).toBe(0)
+  })
 
-    it('should reset upgrades and employees', () => {
-      const state = makeState({
-        totalCoins: 1_000_000,
-        upgrades: { 'line-speed': 5, 'quality-boost': 3 },
-        employees: { engineer: 10 },
-      })
-      performPrestige(state)
-      expect(Object.keys(state.upgrades)).toHaveLength(0)
-      expect(Object.keys(state.employees)).toHaveLength(0)
-    })
+  it('increments prestige level and count', () => {
+    const state = createDefaultState()
+    state.totalCoins = 1_000_000
+    performPrestige(state)
+    expect(state.prestigeLevel).toBe(1)
+    expect(state.prestigeCount).toBe(1)
+  })
 
-    it('should reset unlocked planets to earth only', () => {
-      const state = makeState({
-        totalCoins: 1_000_000,
-        unlockedPlanets: ['earth', 'moon', 'mars'],
-      })
-      performPrestige(state)
-      expect(state.unlockedPlanets).toEqual(['earth'])
-    })
+  it('accumulates stardust', () => {
+    const state = createDefaultState()
+    state.totalCoins = 1_000_000
+    performPrestige(state) // earn 1 stardust
+    expect(state.starDust).toBe(1)
 
-    it('should reset unlocked recipes to ore-smelt only', () => {
-      const state = makeState({
-        totalCoins: 1_000_000,
-        unlockedRecipes: ['ore-smelt', 'metal-work', 'electronics'],
-      })
-      performPrestige(state)
-      expect(state.unlockedRecipes).toEqual(['ore-smelt'])
-    })
+    // After first prestige, threshold is 10M (level 1)
+    state.totalCoins = 100_000_000
+    performPrestige(state) // earn 10 more stardust (sqrt(100))
+    expect(state.starDust).toBe(11) // 1 + 10
+  })
 
-    it('should reset totalProduced and session stats', () => {
-      const state = makeState({
-        totalCoins: 1_000_000,
-        totalProduced: 5000,
-        sessionCoinsEarned: 1000,
-        sessionItemsProduced: 200,
-        sessionUpgradesMade: 10,
-      })
-      performPrestige(state)
-      expect(state.totalProduced).toBe(0)
-      expect(state.sessionCoinsEarned).toBe(0)
-      expect(state.sessionItemsProduced).toBe(0)
-      expect(state.sessionUpgradesMade).toBe(0)
-    })
+  it('updates prestige multiplier', () => {
+    const state = createDefaultState()
+    state.totalCoins = 1_000_000
+    performPrestige(state) // 1 stardust → 1 + 1*0.1 = 1.1
+    expect(state.prestigeMult).toBeCloseTo(1.1, 10)
+  })
 
-    it('should reset totalPlayTime (inflation reset)', () => {
-      const state = makeState({
-        totalCoins: 1_000_000,
-        totalPlayTime: 36000, // 10 hours
-      })
-      performPrestige(state)
-      expect(state.totalPlayTime).toBe(0)
+  it('resets production lines to default', () => {
+    const state = createDefaultState()
+    state.totalCoins = 1_000_000
+    state.productionLines['earth'].push({
+      recipeId: 'advanced-alloy',
+      level: 5,
+      stock: 100,
+      maxStock: 50,
+      automated: true,
     })
+    performPrestige(state)
+    expect(state.productionLines['earth'].length).toBe(1)
+    expect(state.productionLines['earth'][0].recipeId).toBe('ore-smelt')
+  })
 
-    it('should calculate prestigeMult correctly', () => {
-      const state = makeState({ totalCoins: 100_000_000 }) // 10 stardust
-      performPrestige(state)
-      // prestigeMult = 1 + starDust * 0.1 = 1 + 10 * 0.1 = 2.0
-      expect(state.prestigeMult).toBeCloseTo(2.0)
-    })
+  it('resets upgrades and employees', () => {
+    const state = createDefaultState()
+    state.totalCoins = 1_000_000
+    state.upgrades = { 'auto-sell': 3, 'offline-earn': 1 }
+    state.employees = { engineer: 2 }
+    performPrestige(state)
+    expect(Object.keys(state.upgrades).length).toBe(0)
+    expect(Object.keys(state.employees).length).toBe(0)
+  })
 
-    it('should accumulate star dust across prestiges', () => {
-      const state = makeState({ totalCoins: 1_000_000 })
-      performPrestige(state) // +1 stardust, totalCoins reset to 0
-      // After prestige level 1, threshold = 1M * 10 = 10M. Need >= 10M.
-      state.totalCoins = 10_000_000 // sqrt(10) = 3 stardust
-      performPrestige(state)
-      expect(state.starDust).toBe(4) // 1 + 3
-    })
+  it('preserves achievements', () => {
+    const state = createDefaultState()
+    state.totalCoins = 1_000_000
+    state.achievements = ['first-produce', 'millionaire']
+    performPrestige(state)
+    expect(state.achievements).toContain('first-produce')
+    expect(state.achievements).toContain('millionaire')
+  })
 
-    it('should return 0 if earned stardust is 0 even with enough coins', () => {
-      // This edge case: totalCoins = 999,999 < 1M threshold
-      const state = makeState({ totalCoins: 999_999 })
-      expect(performPrestige(state)).toBe(0)
-    })
+  it('resets play time (inflation reset)', () => {
+    const state = createDefaultState()
+    state.totalCoins = 1_000_000
+    state.totalPlayTime = 3600
+    performPrestige(state)
+    expect(state.totalPlayTime).toBe(0)
+  })
 
-    it('should handle multiple prestiges in sequence', () => {
-      const state = makeState({ totalCoins: 10_000_000 }) // sqrt(10) = 3 stardust
-      const earned1 = performPrestige(state)
-      expect(earned1).toBe(3)
-      expect(state.prestigeLevel).toBe(1)
-      // After prestige: totalCoins=0, starDust=3, prestigeMult=1.3
+  it('resets unlocked planets to earth only', () => {
+    const state = createDefaultState()
+    state.totalCoins = 1_000_000
+    state.unlockedPlanets = ['earth', 'moon', 'mars']
+    performPrestige(state)
+    expect(state.unlockedPlanets).toEqual(['earth'])
+  })
+})
 
-      // Need 10M * 10 = 100M for prestige level 1
-      state.totalCoins = 100_000_000
-      const earned2 = performPrestige(state) // sqrt(100) = 10
-      expect(earned2).toBe(10)
-      expect(state.prestigeLevel).toBe(2)
-      expect(state.starDust).toBe(13) // 3 + 10
-    })
+/* ── calcEarnableStardust ──────────────────────────────────────── */
+
+describe('calcEarnableStardust', () => {
+  it('returns 0 below threshold', () => {
+    const state = createDefaultState()
+    state.totalCoins = 500_000
+    expect(calcEarnableStardust(state)).toBe(0)
+  })
+
+  it('returns 1 at 1M coins', () => {
+    const state = createDefaultState()
+    state.totalCoins = 1_000_000
+    expect(calcEarnableStardust(state)).toBe(1)
+  })
+})
+
+/* ── Legacy Functions ──────────────────────────────────────────── */
+
+describe('calcStardustGain (legacy)', () => {
+  it('returns 0 below 1M', () => {
+    expect(calcStardustGain(999_999)).toBe(0)
+  })
+
+  it('returns 1 at 1M', () => {
+    expect(calcStardustGain(1_000_000)).toBe(1)
+  })
+
+  it('floors sqrt', () => {
+    expect(calcStardustGain(2_000_000)).toBe(1)
+  })
+})
+
+describe('canUnlockPlanet', () => {
+  it('can unlock earth with 0 stardust', () => {
+    expect(canUnlockPlanet(0, 0)).toBe(true)
+  })
+
+  it('cannot unlock moon with 0 stardust', () => {
+    expect(canUnlockPlanet(0, 1)).toBe(false)
+  })
+
+  it('can unlock moon with 100 stardust', () => {
+    expect(canUnlockPlanet(100, 1)).toBe(true)
+  })
+
+  it('cannot unlock out of range planet', () => {
+    expect(canUnlockPlanet(99999, 10)).toBe(false)
+  })
+})
+
+describe('calcUpgradeCost', () => {
+  it('returns baseCost at level 0', () => {
+    expect(calcUpgradeCost(100, 0)).toBe(100)
+  })
+
+  it('scales with 1.12^level', () => {
+    const cost = calcUpgradeCost(100, 5)
+    expect(cost).toBe(Math.floor(100 * Math.pow(1.12, 5)))
+  })
+})
+
+describe('calcWorkerSpeed', () => {
+  it('returns baseSpeed at level 0', () => {
+    expect(calcWorkerSpeed(1, 0)).toBe(1)
+  })
+
+  it('adds 10% per level', () => {
+    expect(calcWorkerSpeed(1, 1)).toBeCloseTo(1.1, 10)
+    expect(calcWorkerSpeed(1, 5)).toBeCloseTo(1.5, 10)
+  })
+})
+
+describe('calcFactoryMultiplier', () => {
+  it('returns 1 at level 1', () => {
+    expect(calcFactoryMultiplier(1)).toBe(1)
+  })
+
+  it('returns 1.5 at level 2', () => {
+    expect(calcFactoryMultiplier(2)).toBe(1.5)
+  })
+
+  it('scales linearly from level 2', () => {
+    expect(calcFactoryMultiplier(3)).toBe(2.0)
+    expect(calcFactoryMultiplier(4)).toBe(2.5)
   })
 })

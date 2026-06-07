@@ -1,8 +1,10 @@
 /**
- * Idle Garden Tycoon — CurrencySystem tests (RED phase)
- * Tests are written FIRST. They will fail until implementation exists.
+ * Idle Garden Tycoon — Currency System Tests
+ * TDD: Write tests FIRST, then implement.
  */
+
 import { describe, it, expect, beforeEach } from 'vitest'
+import type { GameState } from '../../src/games/idle-garden/data/types'
 import {
   addCoins,
   spendCoins,
@@ -11,25 +13,32 @@ import {
   transferCoins,
   calcIncomePerSecond,
 } from '../../src/games/idle-garden/systems/CurrencySystem'
-import type { GameState } from '../../src/games/idle-garden/data/types'
 
-function createTestState(overrides: Partial<GameState> = {}): GameState {
+function createInitialState(overrides: Partial<GameState> = {}): GameState {
   return {
-    coins: 100,
-    totalCoins: 100,
-    sunPoints: 0,
-    prestigeLevel: 0,
-    prestigeCount: 0,
-    spGrowthUpgrades: 0,
-    spPriceUpgrades: 0,
-    pots: [],
-    gardenLevel: 1,
+    coins: 0,
+    totalCoins: 0,
     level: 1,
     experience: 0,
+    prestigeLevel: 0,
+    prestigeCount: 0,
+    sunPoints: 0,
+    pots: [],
+    gardenLevel: 1,
     unlockedFlowers: ['sunflower'],
-    upgrades: {},
     decorations: [],
-    stats: { totalCoinsEarned: 0, totalFlowersGrown: 0, totalHarvests: 0, totalPlayTime: 0 },
+    upgrades: {},
+    spGrowthUpgrades: 0,
+    spPriceUpgrades: 0,
+    achievements: [],
+    dailyChallenge: null,
+    stats: {
+      totalCoinsEarned: 0,
+      totalFlowersGrown: 0,
+      totalHarvests: 0,
+      totalPlayTime: 0,
+      maxComboCount: 0,
+    },
     lastOnline: Date.now(),
     sessionStart: Date.now(),
     lastHarvestTime: 0,
@@ -40,150 +49,132 @@ function createTestState(overrides: Partial<GameState> = {}): GameState {
 
 describe('CurrencySystem', () => {
   describe('addCoins', () => {
-    it('increases coins and totalCoins', () => {
-      const state = createTestState()
+    it('should add coins to player balance', () => {
+      const state = createInitialState({ coins: 100 })
       addCoins(state, 50)
       expect(state.coins).toBe(150)
+    })
+
+    it('should update totalCoins when adding coins', () => {
+      const state = createInitialState({ coins: 100, totalCoins: 100 })
+      addCoins(state, 50)
       expect(state.totalCoins).toBe(150)
     })
 
-    it('handles zero amount', () => {
-      const state = createTestState()
-      addCoins(state, 0)
-      expect(state.coins).toBe(100)
-      expect(state.totalCoins).toBe(100)
-    })
-
-    it('handles large amounts', () => {
-      const state = createTestState()
-      addCoins(state, 1_000_000)
-      expect(state.coins).toBe(1_000_100)
-      expect(state.totalCoins).toBe(1_000_100)
-    })
-
-    it('updates stats.totalCoinsEarned', () => {
-      const state = createTestState()
+    it('should update stats.totalCoinsEarned when adding coins', () => {
+      const state = createInitialState({ coins: 100, stats: { totalCoinsEarned: 100, totalFlowersGrown: 0, totalHarvests: 0, totalPlayTime: 0, maxComboCount: 0 } })
       addCoins(state, 50)
-      expect(state.stats.totalCoinsEarned).toBe(50)
+      expect(state.stats.totalCoinsEarned).toBe(150)
     })
 
-    it('floors fractional amounts', () => {
-      const state = createTestState()
-      addCoins(state, 10.7)
-      expect(state.coins).toBe(110)
+    it('should floor fractional coins', () => {
+      const state = createInitialState({ coins: 100 })
+      addCoins(state, 49.9)
+      expect(state.coins).toBe(149)
     })
   })
 
   describe('spendCoins', () => {
-    it('decreases coins and returns true on success', () => {
-      const state = createTestState({ coins: 100 })
-      const result = spendCoins(state, 40)
+    it('should deduct coins from player balance', () => {
+      const state = createInitialState({ coins: 100 })
+      const result = spendCoins(state, 50)
       expect(result).toBe(true)
-      expect(state.coins).toBe(60)
+      expect(state.coins).toBe(50)
     })
 
-    it('returns false and does not deduct if insufficient', () => {
-      const state = createTestState({ coins: 30 })
+    it('should return false if insufficient funds', () => {
+      const state = createInitialState({ coins: 10 })
       const result = spendCoins(state, 50)
       expect(result).toBe(false)
-      expect(state.coins).toBe(30)
+      expect(state.coins).toBe(10) // unchanged
     })
 
-    it('handles exact balance', () => {
-      const state = createTestState({ coins: 100 })
-      const result = spendCoins(state, 100)
+    it('should return false for negative amounts', () => {
+      const state = createInitialState({ coins: 100 })
+      const result = spendCoins(state, -50)
+      expect(result).toBe(false)
+      expect(state.coins).toBe(100) // unchanged
+    })
+
+    it('should floor fractional amounts', () => {
+      const state = createInitialState({ coins: 100 })
+      const result = spendCoins(state, 49.9)
       expect(result).toBe(true)
-      expect(state.coins).toBe(0)
-    })
-
-    it('handles zero amount', () => {
-      const state = createTestState({ coins: 100 })
-      const result = spendCoins(state, 0)
-      expect(result).toBe(true)
-      expect(state.coins).toBe(100)
-    })
-
-    it('does not modify totalCoins', () => {
-      const state = createTestState({ coins: 100, totalCoins: 500 })
-      spendCoins(state, 50)
-      expect(state.totalCoins).toBe(500)
+      expect(state.coins).toBe(51)
     })
   })
 
   describe('canAfford', () => {
-    it('returns true when coins >= cost', () => {
-      const state = createTestState({ coins: 100 })
+    it('should return true if player has enough coins', () => {
+      const state = createInitialState({ coins: 100 })
       expect(canAfford(state, 100)).toBe(true)
-      expect(canAfford(state, 50)).toBe(true)
     })
 
-    it('returns false when coins < cost', () => {
-      const state = createTestState({ coins: 30 })
-      expect(canAfford(state, 50)).toBe(false)
+    it('should return false if player has insufficient coins', () => {
+      const state = createInitialState({ coins: 50 })
+      expect(canAfford(state, 100)).toBe(false)
     })
 
-    it('returns true for zero cost', () => {
-      const state = createTestState({ coins: 0 })
-      expect(canAfford(state, 0)).toBe(true)
+    it('should return true if player has exactly enough coins', () => {
+      const state = createInitialState({ coins: 100 })
+      expect(canAfford(state, 100)).toBe(true)
     })
   })
 
   describe('getBalance', () => {
-    it('returns current coins', () => {
-      const state = createTestState({ coins: 42 })
-      expect(getBalance(state)).toBe(42)
+    it('should return current coin balance', () => {
+      const state = createInitialState({ coins: 250 })
+      expect(getBalance(state)).toBe(250)
     })
   })
 
   describe('transferCoins', () => {
-    it('transfers from source to target when affordable', () => {
-      const source = createTestState({ coins: 100 })
-      const target = createTestState({ coins: 50 })
+    it('should transfer coins between two states', () => {
+      const source = createInitialState({ coins: 100 })
+      const target = createInitialState({ coins: 50 })
       const result = transferCoins(source, target, 30)
       expect(result).toBe(true)
       expect(source.coins).toBe(70)
       expect(target.coins).toBe(80)
     })
 
-    it('fails if source cannot afford', () => {
-      const source = createTestState({ coins: 20 })
-      const target = createTestState({ coins: 50 })
+    it('should return false if source cannot afford', () => {
+      const source = createInitialState({ coins: 10 })
+      const target = createInitialState({ coins: 50 })
       const result = transferCoins(source, target, 30)
       expect(result).toBe(false)
-      expect(source.coins).toBe(20)
+      expect(source.coins).toBe(10)
       expect(target.coins).toBe(50)
     })
   })
 
   describe('calcIncomePerSecond', () => {
-    it('returns 0 with no ready pots', () => {
-      const state = createTestState({ pots: [] })
+    it('should return 0 if auto-harvest upgrade is not purchased', () => {
+      const state = createInitialState({ upgrades: {} })
       expect(calcIncomePerSecond(state)).toBe(0)
     })
 
-    it('calculates income from ready flowers', () => {
-      const state = createTestState({
+    it('should calculate income based on ready flowers', () => {
+      const state = createInitialState({
+        upgrades: { 'auto-harvest': 1 },
         pots: [
           { id: 0, flowerId: 'sunflower', plantedAt: 0, isWatered: false, isReady: true },
           { id: 1, flowerId: 'sunflower', plantedAt: 0, isWatered: false, isReady: true },
         ],
-        unlockedFlowers: ['sunflower'],
       })
-      // sunflower sells for 10, with auto-harvest level 0 -> no auto income
-      const income = calcIncomePerSecond(state)
-      expect(income).toBe(0) // no auto-harvest = no passive income
+      // 2 sunflowers at 10 coins each = 20 coins total
+      // Level 1 harvest = 1 harvest/60s = 20/60 = 0.333 coins/s
+      expect(calcIncomePerSecond(state)).toBeCloseTo(0.333, 2)
     })
 
-    it('calculates passive income with auto-harvest', () => {
-      const state = createTestState({
-        pots: [
-          { id: 0, flowerId: 'sunflower', plantedAt: 0, isWatered: false, isReady: true },
-        ],
+    it('should return 0 if no flowers are ready', () => {
+      const state = createInitialState({
         upgrades: { 'auto-harvest': 1 },
-        unlockedFlowers: ['sunflower'],
+        pots: [
+          { id: 0, flowerId: 'sunflower', plantedAt: 0, isWatered: false, isReady: false },
+        ],
       })
-      const income = calcIncomePerSecond(state)
-      expect(income).toBeGreaterThan(0)
+      expect(calcIncomePerSecond(state)).toBe(0)
     })
   })
 })

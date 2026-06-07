@@ -19,6 +19,12 @@ export interface Planet {
   requiredPrestiges: number
   /** First recipe given when unlocking */
   firstRecipe: string
+  /** Icon path for planet display */
+  icon: string
+  /** Border color for planet card */
+  color: string
+  /** Short description of unique mechanic */
+  specialMechanic: string
 }
 
 export const PLANETS: Planet[] = [
@@ -35,6 +41,9 @@ export const PLANETS: Planet[] = [
     index: 0,
     requiredPrestiges: 0,
     firstRecipe: 'ore-smelt',
+    icon: `${import.meta.env.BASE_URL}assets/space-factory-idle/planets/earth.webp`,
+    color: '#00D4FF',
+    specialMechanic: 'Starter planet — all basics',
   },
   {
     id: 'moon',
@@ -49,6 +58,9 @@ export const PLANETS: Planet[] = [
     index: 1,
     requiredPrestiges: 0,
     firstRecipe: 'helium3',
+    icon: `${import.meta.env.BASE_URL}assets/space-factory-idle/planets/moon.webp`,
+    color: '#A855F7',
+    specialMechanic: '×1.2 output bonus',
   },
   {
     id: 'mars',
@@ -63,6 +75,9 @@ export const PLANETS: Planet[] = [
     index: 2,
     requiredPrestiges: 0,
     firstRecipe: 'mars-alloy',
+    icon: `${import.meta.env.BASE_URL}assets/space-factory-idle/planets/mars.webp`,
+    color: '#FF6B4A',
+    specialMechanic: '×1.5 output bonus',
   },
   {
     id: 'europa',
@@ -77,6 +92,9 @@ export const PLANETS: Planet[] = [
     index: 3,
     requiredPrestiges: 0,
     firstRecipe: 'ice-core',
+    icon: `${import.meta.env.BASE_URL}assets/space-factory-idle/planets/jupiter.webp`,
+    color: '#4AE0FF',
+    specialMechanic: '×2.0 output bonus',
   },
   {
     id: 'titan',
@@ -91,6 +109,9 @@ export const PLANETS: Planet[] = [
     index: 4,
     requiredPrestiges: 0,
     firstRecipe: 'polymer',
+    icon: `${import.meta.env.BASE_URL}assets/space-factory-idle/planets/saturn.webp`,
+    color: '#FFD740',
+    specialMechanic: '×2.5 output bonus',
   },
   {
     id: 'galactic',
@@ -105,6 +126,9 @@ export const PLANETS: Planet[] = [
     index: 5,
     requiredPrestiges: 3,
     firstRecipe: 'galactic-matter',
+    icon: `${import.meta.env.BASE_URL}assets/space-factory-idle/planets/galactic.webp`,
+    color: '#E040FB',
+    specialMechanic: '×3.0 output bonus — requires 3 prestiges',
   },
 ]
 

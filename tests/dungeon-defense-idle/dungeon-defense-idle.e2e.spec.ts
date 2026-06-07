@@ -46,6 +46,21 @@ async function waitForCanvas(page: Page, timeout = 10000) {
   await page.waitForSelector('canvas', { timeout })
 }
 
+async function dismissTutorial(page: Page) {
+  // Wait for tutorial overlay to appear
+  const tutorialOverlay = page.locator('[data-testid="tutorial-overlay"]')
+  try {
+    await tutorialOverlay.waitFor({ state: 'visible', timeout: 3000 })
+    // Click skip button
+    const skipBtn = page.locator('.btn-skip')
+    await skipBtn.click({ timeout: 2000 })
+    // Wait for overlay to disappear
+    await tutorialOverlay.waitFor({ state: 'hidden', timeout: 2000 })
+  } catch {
+    // Tutorial might not appear if state has bestWave > 0
+  }
+}
+
 test.describe('Dungeon Defense Idle E2E', () => {
   test('should load without JS errors', async ({ page }) => {
     const errors: string[] = []
@@ -92,6 +107,7 @@ test.describe('Dungeon Defense Idle E2E', () => {
     await page.waitForTimeout(2000)
     await page.locator('[data-testid="start-btn"]').click()
     await waitForCanvas(page)
+    await dismissTutorial(page)
     const waveBtn = page.locator('[data-testid="start-wave-btn"]')
     await expect(waveBtn).toBeVisible({ timeout: 5000 })
     await waveBtn.click()
@@ -107,6 +123,7 @@ test.describe('Dungeon Defense Idle E2E', () => {
     await page.waitForTimeout(2000)
     await page.locator('[data-testid="start-btn"]').click()
     await waitForCanvas(page)
+    await dismissTutorial(page)
     await page.waitForTimeout(1000)
     // Go to menu — this triggers saveState()
     await page.locator('.btn-icon').click()
@@ -124,6 +141,7 @@ test.describe('Dungeon Defense Idle E2E', () => {
     await page.waitForTimeout(2000)
     await page.locator('[data-testid="start-btn"]').click()
     await waitForCanvas(page)
+    await dismissTutorial(page)
     await page.locator('.tab-btn').nth(1).click()
     const h2 = page.locator('.overlay-header h2')
     await expect(h2.first()).toBeVisible({ timeout: 5000 })
@@ -134,6 +152,7 @@ test.describe('Dungeon Defense Idle E2E', () => {
     await page.waitForTimeout(2000)
     await page.locator('[data-testid="start-btn"]').click()
     await waitForCanvas(page)
+    await dismissTutorial(page)
     await page.locator('.tab-btn').nth(2).click()
     const h2 = page.locator('.overlay-header h2')
     await expect(h2.first()).toBeVisible({ timeout: 5000 })
@@ -144,6 +163,7 @@ test.describe('Dungeon Defense Idle E2E', () => {
     await page.waitForTimeout(2000)
     await page.locator('[data-testid="start-btn"]').click()
     await waitForCanvas(page)
+    await dismissTutorial(page)
     await page.locator('.tab-btn').nth(3).click()
     const h2 = page.locator('.overlay-header h2')
     await expect(h2.first()).toBeVisible({ timeout: 5000 })
@@ -154,6 +174,7 @@ test.describe('Dungeon Defense Idle E2E', () => {
     await page.waitForTimeout(2000)
     await page.locator('[data-testid="start-btn"]').click()
     await waitForCanvas(page)
+    await dismissTutorial(page)
     await page.locator('.tab-btn').nth(6).click()
     const pgrid = page.locator('.prestige-grid')
     await expect(pgrid).toBeVisible({ timeout: 5000 })
@@ -166,6 +187,7 @@ test.describe('Dungeon Defense Idle E2E', () => {
     await page.waitForTimeout(2000)
     await page.locator('[data-testid="start-btn"]').click()
     await waitForCanvas(page)
+    await dismissTutorial(page)
     await page.locator('.tab-btn').nth(4).click()
     const dcCard = page.locator('.daily-card')
     await expect(dcCard).toBeVisible({ timeout: 5000 })
@@ -178,6 +200,7 @@ test.describe('Dungeon Defense Idle E2E', () => {
     await page.waitForTimeout(2000)
     await page.locator('[data-testid="start-btn"]').click()
     await waitForCanvas(page)
+    await dismissTutorial(page)
     await page.locator('.btn-icon').click()
     await page.waitForTimeout(500)
     const title = page.locator('.title-main')

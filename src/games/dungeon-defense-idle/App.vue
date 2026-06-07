@@ -14,6 +14,10 @@ import { getTodayChallenge, isDailyCompletedToday, type DailyChallenge } from '.
 import { translations, getLocale, type Locale } from './i18n/translations'
 import { GameScene } from './phaser/scenes/GameScene'
 import type { GameSceneData } from './phaser/scenes/GameScene'
+import {
+  startTutorial, markStepComplete, getNextStep, isTutorialComplete,
+  getTutorialProgress, resetTutorial, type TutorialState, type TutorialStep,
+} from './logic/tutorial'
 
 const adManager = AdManager.getInstance()
 const locale = ref<Locale>(getLocale())
@@ -27,6 +31,8 @@ const offlineRewardAmount = ref(0)
 const achievementToast = ref('')
 const todayChallenge = ref<DailyChallenge>(getTodayChallenge())
 let tickTimer: ReturnType<typeof setInterval> | null = null
+const tutorialState = ref<TutorialState>(startTutorial())
+const showTutorial = ref(false)
 
 let phaserGame: Phaser.Game | null = null
 const phaserContainer = ref<HTMLDivElement>()
@@ -88,6 +94,10 @@ function startGame() {
     state.totalCoins += offline
     state.sessionGoldEarned += offline
   }
+  // Show tutorial for brand new players
+  if (state.bestWave === 0 && !isTutorialComplete(tutorialState.value)) {
+    showTutorial.value = true
+  }
   nextTick(() => { if (!phaserGame) initPhaser() })
 }
 
@@ -119,6 +129,7 @@ function handlePrestige() {
   const earned = performPrestige(state)
   if (earned > 0) {
     audioEngine.play('levelup')
+    getGameScene()?.spawnPrestigeParticles()
     achievementToast.value = `Prestige! +${earned} Dark Energy`
     setTimeout(() => { achievementToast.value = '' }, 3000)
     saveState(state)
@@ -149,6 +160,31 @@ function checkAchievements() {
 
 function goTo(s: Screen) { screen.value = s }
 function goBack() { screen.value = 'game'; nextTick(() => refreshPhaser()) }
+
+function advanceTutorial() {
+  const current = getNextStep(tutorialState.value)
+  if (current) {
+    tutorialState.value = markStepComplete(tutorialState.value, current.id)
+    if (isTutorialComplete(tutorialState.value)) {
+      showTutorial.value = false
+    }
+  }
+}
+
+function skipTutorial() {
+  const steps = getTutorialProgress(tutorialState.value)
+  let state = tutorialState.value
+  for (let i = 0; i < steps.total; i++) {
+    const next = getNextStep(state)
+    if (next) state = markStepComplete(state, next.id)
+  }
+  tutorialState.value = state
+  showTutorial.value = false
+}
+
+const currentTutorialStep = computed(() => getNextStep(tutorialState.value))
+const tutorialProgress = computed(() => getTutorialProgress(tutorialState.value))
+
 function goToMenu() {
   screen.value = 'menu'
   adManager.gameplayStop()
@@ -393,13 +429,31 @@ onUnmounted(() => { destroyPhaser(); saveState(state) })
         </div>
       </div>
     </div>
+
+    <!-- TUTORIAL OVERLAY -->
+    <div v-if="showTutorial && currentTutorialStep" class="tutorial-overlay" data-testid="tutorial-overlay">
+      <div class="tutorial-card">
+        <div class="tutorial-progress-bar">
+          <div class="tutorial-progress-fill" :style="{ width: tutorialProgress.percentage + '%' }"></div>
+        </div>
+        <div class="tutorial-step-count">Step {{ tutorialProgress.completed + 1 }} / {{ tutorialProgress.total }}</div>
+        <h3 class="tutorial-title">{{ currentTutorialStep.title }}</h3>
+        <p class="tutorial-desc">{{ currentTutorialStep.description }}</p>
+        <div class="tutorial-btns">
+          <button class="btn btn-primary" data-testid="tutorial-next-btn" @click="advanceTutorial">
+            {{ tutorialProgress.completed + 1 === tutorialProgress.total ? 'Got it!' : 'Next' }}
+          </button>
+          <button class="btn btn-skip" @click="skipTutorial">Skip Tutorial</button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <style scoped>
 .game-wrapper { width: 100vw; height: 100vh; overflow: hidden; background: #0d0d1a; font-family: 'Exo 2', sans-serif; color: #fff; position: relative; }
-.menu-screen { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: radial-gradient(circle at 50% 30%, #1a1a3e, #0d0d1a); }
-.menu-content { text-align: center; z-index: 1; }
+.menu-screen { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: url('/assets/bg-menu.webp') center/cover no-repeat, radial-gradient(circle at 50% 30%, #1a1a3e, #0d0d1a); }
+.menu-content { text-align: center; z-index: 1; background: rgba(13,13,26,0.7); padding: 32px; border-radius: 16px; backdrop-filter: blur(4px); }
 .game-title { font-family: 'Orbitron', sans-serif; margin-bottom: 8px; }
 .title-main { display: block; font-size: 48px; font-weight: 900; background: linear-gradient(135deg, #ff5722, #e91e63); -webkit-background-clip: text; -webkit-text-fill-color: transparent; letter-spacing: 6px; }
 .title-sub { display: block; font-size: 28px; font-weight: 400; color: #00e5ff; letter-spacing: 14px; }
@@ -501,4 +555,17 @@ onUnmounted(() => { destroyPhaser(); saveState(state) })
   .hud-res { font-size: 11px; }
   .tab-btn { font-size: 18px; padding: 6px 8px; }
 }
+
+/* Tutorial Overlay */
+.tutorial-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.6); z-index: 50; display: flex; align-items: center; justify-content: center; }
+.tutorial-card { background: #1a1a3e; border: 1px solid rgba(0,229,255,0.3); border-radius: 16px; padding: 24px; max-width: 360px; width: 90%; text-align: center; animation: tutorial-pop 0.3s ease-out; }
+@keyframes tutorial-pop { 0% { transform: scale(0.9); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+.tutorial-progress-bar { width: 100%; height: 4px; background: rgba(255,255,255,0.1); border-radius: 2px; margin-bottom: 12px; overflow: hidden; }
+.tutorial-progress-fill { height: 100%; background: linear-gradient(90deg, #00e5ff, #e040fb); border-radius: 2px; transition: width 0.3s ease; }
+.tutorial-step-count { font-size: 11px; color: rgba(255,255,255,0.4); margin-bottom: 8px; letter-spacing: 1px; }
+.tutorial-title { font-family: 'Orbitron', sans-serif; font-size: 18px; color: #00e5ff; margin-bottom: 8px; }
+.tutorial-desc { color: rgba(255,255,255,0.8); font-size: 14px; line-height: 1.6; margin-bottom: 20px; }
+.tutorial-btns { display: flex; flex-direction: column; gap: 8px; }
+.btn-skip { background: transparent; border: 1px solid rgba(255,255,255,0.2); color: rgba(255,255,255,0.5); font-size: 13px; padding: 8px; cursor: pointer; border-radius: 8px; font-family: 'Exo 2', sans-serif; }
+.btn-skip:hover { color: rgba(255,255,255,0.8); border-color: rgba(255,255,255,0.4); }
 </style>

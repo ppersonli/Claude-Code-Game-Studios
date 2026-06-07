@@ -361,8 +361,8 @@ test.describe('Space Factory Idle E2E', () => {
     await startBtn.click()
     await waitForCanvas(page)
 
-    // Open prestige (⭐ tab)
-    const prestigeTab = page.locator('.tab-btn').nth(6)
+    // Open prestige (⭐ tab — index 7, last tab)
+    const prestigeTab = page.locator('.tab-btn').nth(7)
     await prestigeTab.click()
 
     const prestigeGrid = page.locator('.prestige-grid')

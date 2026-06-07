@@ -83,14 +83,35 @@ for (const game of games) {
       if (!existsSync(jsPath)) continue
       const jsContent = readFileSync(jsPath, 'utf-8')
       
-      // 找所有资源引用（三种格式）:
-      // 1. "./assets/xxx.webp" — 数据文件中的引用
-      // 2. "xxx.webp" — new URL("xxx.webp", import.meta.url) 构建后保留
-      // 3. import("./xxx.js") — 动态import (国际化等)
-      const assetRegex = /(?:import\(["']\.\/|["'](?:\.\/assets\/)?)([^"'/]+\.(?:webp|png|jpg|jpeg|gif|svg|mp3|ogg|wav|json|js|css))["')]/g
+      // 找所有资源引用（五种格式）:
+      // 1. "./assets/xxx.webp" — 数据文件中的引用（引号包裹）
+      // 2. "./assets/subdir/xxx.webp" — 带子目录的引用
+      // 3. `assets/xxx.webp` — Vue编译后的模板字符串（反引号包裹，如 :src="`${BASE_URL}assets/cover.webp`"）
+      // 4. "xxx.webp" — new URL("xxx.webp", import.meta.url) 构建后保留
+      // 5. import("./xxx.js") — 动态import (国际化等)
+      // 简化策略：直接匹配所有 assets/xxx.ext 和 new URL 的裸文件名
+      const assetRegex = /(?:\.\/)?assets\/([^"'\x60\s]+\.(?:webp|png|jpg|jpeg|gif|svg|mp3|ogg|wav|json|js|css))/g
       let assetMatch
       while ((assetMatch = assetRegex.exec(jsContent)) !== null) {
         const assetRel = assetMatch[1]
+        if (!assetsToCopy.has(assetRel)) {
+          assetsToCopy.set(assetRel, resolve(allAssetsDir, assetRel))
+        }
+      }
+      // 也匹配 new URL("xxx.ext", import.meta.url) 格式（无assets/前缀）
+      const bareAssetRegex = /new\s+URL\(["']([^"']+\.(?:webp|png|jpg|jpeg|gif|svg|mp3|ogg|wav))["']/g
+      let bareMatch
+      while ((bareMatch = bareAssetRegex.exec(jsContent)) !== null) {
+        const assetRel = bareMatch[1]
+        if (!assetsToCopy.has(assetRel)) {
+          assetsToCopy.set(assetRel, resolve(allAssetsDir, assetRel))
+        }
+      }
+      // 也匹配 import("./xxx.js") 动态导入（国际化等，无assets/前缀）
+      const importRegex = /import\(["']\.\/([^"']+\.(?:js|css|json))["']\)/g
+      let importMatch
+      while ((importMatch = importRegex.exec(jsContent)) !== null) {
+        const assetRel = importMatch[1]
         if (!assetsToCopy.has(assetRel)) {
           assetsToCopy.set(assetRel, resolve(allAssetsDir, assetRel))
         }

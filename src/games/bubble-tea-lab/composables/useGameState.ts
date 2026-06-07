@@ -69,16 +69,16 @@ export function calculateServeResult(
 export function generateOrder(level: number, unlockedIds: readonly string[]): Ingredient[] {
   const available = INGREDIENTS.filter(i => isIngredientUnlocked(i, unlockedIds))
 
-  // Progressive ingredient count based on level
+  // Progressive ingredient count based on level (deterministic)
   let count: number
   if (level <= 1) {
     count = 2
   } else if (level <= 3) {
-    count = 2 + Math.floor(Math.random() * 2) // 2-3
+    count = 3
   } else if (level <= 5) {
-    count = 3 + Math.floor(Math.random() * 2) // 3-4
+    count = 4
   } else {
-    count = Math.min(4 + Math.floor(Math.random() * 2), available.length) // 4-5
+    count = Math.min(5, available.length)
   }
 
   return pickRandomUnique(available, count)

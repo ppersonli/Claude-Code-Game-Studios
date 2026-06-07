@@ -27,6 +27,12 @@ export interface GameState {
   prestigeCount: number
   /** Timestamp of last play */
   lastPlayTime: number
+  /** Daily challenges completed total */
+  dailyChallengesCompleted: number
+  /** Current daily challenge streak (consecutive days) */
+  dailyChallengeStreak: number
+  /** Last daily challenge completion date (YYYY-MM-DD) */
+  lastDailyChallengeDate: string | null
 }
 
 export function createInitialState(): GameState {
@@ -43,6 +49,9 @@ export function createInitialState(): GameState {
     galaxyCoins: 0,
     prestigeCount: 0,
     lastPlayTime: Date.now(),
+    dailyChallengesCompleted: 0,
+    dailyChallengeStreak: 0,
+    lastDailyChallengeDate: null,
   }
 }
 

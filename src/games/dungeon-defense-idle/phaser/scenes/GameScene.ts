@@ -9,6 +9,7 @@ import { DUNGEONS } from '../../data/dungeons'
 import { CONSTANTS, calcCost, calcDamage } from '../../logic/constants'
 import { DEFAULT_WAYPOINTS, waypointsToPixels, getPathCells, moveAlongPath, type Point } from '../../logic/pathfinding'
 import { spawnWave, processCombatTick, getTowerUpgradeCost } from '../../logic/combat'
+import { createKillParticles, createUpgradeParticles, createPrestigeParticles, tickParticles, type Particle } from '../../logic/particles'
 import type { GameState, TowerState, MonsterInstance } from '../../logic/game-state'
 
 /* ── Types ────────────────────────────────────────────────────── */
@@ -49,12 +50,14 @@ export class GameScene extends Phaser.Scene {
   private monsterGfx!: Phaser.GameObjects.Graphics
   private projectileGfx!: Phaser.GameObjects.Graphics
   private rangeGfx!: Phaser.GameObjects.Graphics
+  private particleGfx!: Phaser.GameObjects.Graphics
   private infoText!: Phaser.GameObjects.Text
 
   private pathCells = new Set<string>()
   private pixelWaypoints: Point[] = []
   private monsters: MonsterInstance[] = []
   private projectiles: Projectile[] = []
+  private particles: Particle[] = []
   private waveInProgress = false
   private waveTimer = 0
   private selectedCell: { col: number; row: number } | null = null
@@ -67,6 +70,7 @@ export class GameScene extends Phaser.Scene {
     this.sceneData = data
     this.monsters = []
     this.projectiles = []
+    this.particles = []
     this.waveInProgress = false
     this.waveTimer = 0
     this.selectedCell = null
@@ -91,6 +95,7 @@ export class GameScene extends Phaser.Scene {
     this.towerGfx = this.add.graphics()
     this.monsterGfx = this.add.graphics()
     this.projectileGfx = this.add.graphics()
+    this.particleGfx = this.add.graphics()
 
     this.drawGrid(dungeon)
     this.drawPath(dungeon)
@@ -168,9 +173,16 @@ export class GameScene extends Phaser.Scene {
       if (hero && hero.effectType === 'atk_boost') heroAtkMult += hero.effectValue
     }
 
-    // Combat tick
-    const prevAlive = this.monsters.filter(m => m.alive).length
+    // Combat tick — track alive before/after for kill particles
+    const aliveBefore = this.monsters.filter(m => m.alive && m.spawned).map(m => m.id)
     const combat = processCombatTick(towers, this.monsters, this.towerDefs, heroAtkMult, state.prestigeMult, Date.now(), deltaSec)
+
+    // Spawn kill particles for newly killed monsters
+    for (const m of this.monsters) {
+      if (aliveBefore.includes(m.id) && !m.alive) {
+        this.particles.push(...createKillParticles(m.pos.x, m.pos.y, m.color))
+      }
+    }
 
     // Track new attacks for projectile visuals
     for (const tower of towers) {
@@ -225,6 +237,10 @@ export class GameScene extends Phaser.Scene {
     // Redraw
     this.drawMonsters()
     this.drawProjectiles()
+
+    // Tick and draw particles
+    tickParticles(this.particles, deltaSec)
+    this.drawParticles()
   }
 
   /* ── Drawing ────────────────────────────────────────────────── */
@@ -438,6 +454,15 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
+  private drawParticles(): void {
+    this.particleGfx.clear()
+    for (const p of this.particles) {
+      const alpha = Math.max(0, p.lifetime / p.maxLifetime)
+      this.particleGfx.fillStyle(p.color, alpha)
+      this.particleGfx.fillCircle(p.x, p.y, p.size)
+    }
+  }
+
   private drawRange(state: GameState): void {
     this.rangeGfx.clear()
     if (!this.selectedCell) return
@@ -535,6 +560,8 @@ export class GameScene extends Phaser.Scene {
     this.sceneData.onTowerUpgraded(key, tower.level)
     this.sceneData.onCoinsChanged(state.coins)
     this.infoText.setText(`${def.name} upgraded to Lv${tower.level}!`)
+    // Upgrade particles
+    this.particles.push(...createUpgradeParticles(tower.pos.x, tower.pos.y))
     this.drawTowers(state)
     this.drawRange(state)
   }
@@ -561,5 +588,12 @@ export class GameScene extends Phaser.Scene {
   /** Check if a wave is in progress */
   isWaveActive(): boolean {
     return this.waveInProgress
+  }
+
+  /** Spawn prestige celebration particles at grid center */
+  spawnPrestigeParticles(): void {
+    const cx = GRID_OFFSET_X + (COLS * CELL) / 2
+    const cy = GRID_OFFSET_Y + (ROWS * CELL) / 2
+    this.particles.push(...createPrestigeParticles(cx, cy))
   }
 }

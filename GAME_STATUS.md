@@ -1,6 +1,6 @@
 # CC Games - Game Status
 
-## 2026-06-05 Cron Run — idle-garden Progress Update
+## 2026-06-06 Cron Run — idle-garden Complete
 
 ### Portfolio Summary (Active Games)
 
@@ -78,11 +78,9 @@ ab3c45a feat(idle-garden): Phase 1 core systems with TDD — CurrencySystem, Gar
 - **All 3 recommendations implemented**
 
 ### Next Steps
-1. Complete idle-garden Phase 5 (testing & polish)
-2. Build CG package for idle-golf
-3. Submit idle-garden to CG Basic Launch
-4. Monitor QA results for all submitted games
-5. Iterate based on CG Basic Launch data
+1. Submit idle-garden to CG Basic Launch (manual step — package ready at `dist/cg-idle-garden.zip`)
+2. Monitor QA results for all submitted games
+3. Iterate based on CG Basic Launch data
 
 ### Portfolio History
 - bubble-tea-lab: Original game, kept as reference
