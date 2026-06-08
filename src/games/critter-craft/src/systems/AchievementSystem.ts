@@ -1,5 +1,13 @@
 import { Achievement, ACHIEVEMENTS } from '../data/achievements';
 
+export interface AchievementProgress {
+  id: string;
+  name: string;
+  current: number;
+  target: number;
+  percentage: number;
+}
+
 export interface CheckContext {
   mergeCount?: number;
   productsSold?: number;
@@ -10,9 +18,53 @@ export interface CheckContext {
 
 export class AchievementSystem {
   private unlockedIds: Set<string>;
+  private mergeCount: number = 0;
+  private productsSold: number = 0;
 
   constructor() {
     this.unlockedIds = new Set();
+  }
+
+  /**
+   * Record a merge event
+   */
+  recordMerge(): void {
+    this.mergeCount++;
+  }
+
+  /**
+   * Record a product sale
+   */
+  recordSale(): void {
+    this.productsSold++;
+  }
+
+  /**
+   * Get total merge count
+   */
+  getMergeCount(): number {
+    return this.mergeCount;
+  }
+
+  /**
+   * Get total products sold
+   */
+  getProductsSold(): number {
+    return this.productsSold;
+  }
+
+  /**
+   * Set merge count (for loading from save)
+   */
+  setMergeCount(count: number): void {
+    this.mergeCount = count;
+  }
+
+  /**
+   * Set products sold (for loading from save)
+   */
+  setProductsSold(count: number): void {
+    this.productsSold = count;
   }
 
   /**
@@ -100,6 +152,51 @@ export class AchievementSystem {
    */
   getUnlockedIds(): string[] {
     return Array.from(this.unlockedIds);
+  }
+
+  /**
+   * Get progress toward a specific achievement
+   */
+  getProgress(id: string, context: CheckContext): AchievementProgress {
+    const achievement = this.getAchievement(id);
+    const { current, target } = this.evaluateProgress(id, context);
+    const percentage = this.unlockedIds.has(id) ? 100 : Math.min(100, target > 0 ? (current / target) * 100 : 0);
+    return {
+      id,
+      name: achievement?.name ?? id,
+      current: Math.min(current, target),
+      target,
+      percentage,
+    };
+  }
+
+  /**
+   * Get progress for all achievements
+   */
+  getAllProgress(context: CheckContext): AchievementProgress[] {
+    return ACHIEVEMENTS.map(a => this.getProgress(a.id, context));
+  }
+
+  /**
+   * Evaluate current progress value and target for an achievement
+   */
+  private evaluateProgress(id: string, context: CheckContext): { current: number; target: number } {
+    switch (id) {
+      case 'first_merge':
+        return { current: context.mergeCount ?? 0, target: 1 };
+      case 'sell_10':
+        return { current: context.productsSold ?? 0, target: 10 };
+      case 'unlock_3_animals':
+        return { current: context.unlockedAnimals ?? 0, target: 3 };
+      case 'merge_100':
+        return { current: context.mergeCount ?? 0, target: 100 };
+      case 'max_upgrade':
+        return { current: context.hasMaxUpgrade ? 1 : 0, target: 1 };
+      case 'collect_all':
+        return { current: context.allProductsCollected ? 1 : 0, target: 1 };
+      default:
+        return { current: 0, target: 1 };
+    }
   }
 
   /**

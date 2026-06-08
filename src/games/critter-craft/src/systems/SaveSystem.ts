@@ -4,6 +4,7 @@ export interface GameState {
   animalStates?: Record<string, { level: number; unlocked: boolean }>;
   productInventory?: Record<string, number>;
   gridSize?: number;
+  gridContent?: (string | null)[][];
   productsSold?: number;
   mergeCount?: number;
   lastSaveTime?: number;

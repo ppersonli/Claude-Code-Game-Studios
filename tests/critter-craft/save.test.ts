@@ -131,6 +131,70 @@ describe('SaveSystem', () => {
     });
   });
 
+  describe('Grid State Save/Restore', () => {
+    it('should save grid cell contents', () => {
+      const gridContent = [
+        ['yarn', 'wood', null],
+        [null, 'yarn_b', null],
+        ['carrot', null, null],
+      ];
+
+      const state = {
+        coins: 100,
+        gridSize: 3,
+        gridContent,
+      };
+
+      saveSystem.save(state);
+
+      const savedData = JSON.parse(localStorageMock.setItem.mock.calls[0][1]);
+      expect(savedData.gridContent).toEqual(gridContent);
+    });
+
+    it('should restore grid cell contents on load', () => {
+      const gridContent = [
+        ['yarn', 'wood', null],
+        [null, 'yarn_b', null],
+        ['carrot', null, null],
+      ];
+
+      const savedState = {
+        coins: 100,
+        gridSize: 3,
+        gridContent,
+        lastSaveTime: Date.now(),
+      };
+
+      localStorageMock.getItem.mockReturnValue(JSON.stringify(savedState));
+
+      const loaded = saveSystem.load();
+      expect(loaded).not.toBeNull();
+      expect(loaded!.gridContent).toEqual(gridContent);
+      expect(loaded!.gridContent![0][0]).toBe('yarn');
+      expect(loaded!.gridContent![1][1]).toBe('yarn_b');
+      expect(loaded!.gridContent![0][2]).toBeNull();
+    });
+
+    it('should handle larger grid sizes on save/load', () => {
+      const gridContent: (string | null)[][] = Array(5).fill(null).map(() => Array(5).fill(null));
+      gridContent[0][0] = 'yarn';
+      gridContent[4][4] = 'honey';
+
+      const state = { coins: 0, gridSize: 5, gridContent };
+      saveSystem.save(state);
+
+      localStorageMock.getItem.mockReturnValue(
+        localStorageMock.setItem.mock.calls[0][1]
+      );
+
+      const loaded = saveSystem.load();
+      expect(loaded!.gridContent).toHaveLength(5);
+      expect(loaded!.gridContent![0]).toHaveLength(5);
+      expect(loaded!.gridContent![0][0]).toBe('yarn');
+      expect(loaded!.gridContent![4][4]).toBe('honey');
+    });
+  });
+
   describe('Clear Save', () => {
     it('should clear saved data', () => {
       saveSystem.clearSave();

@@ -113,6 +113,67 @@ describe('AchievementSystem', () => {
     });
   });
 
+  describe('Progress Percentage', () => {
+    it('should return progress for sell_10 with partial completion', () => {
+      const progress = achievementSystem.getProgress('sell_10', { productsSold: 5 });
+      expect(progress.current).toBe(5);
+      expect(progress.target).toBe(10);
+      expect(progress.percentage).toBe(50);
+    });
+
+    it('should return 100% for completed achievement', () => {
+      achievementSystem.checkAndUnlock('sell_10', { productsSold: 15 });
+      const progress = achievementSystem.getProgress('sell_10', { productsSold: 15 });
+      expect(progress.percentage).toBe(100);
+    });
+
+    it('should cap progress at 100%', () => {
+      const progress = achievementSystem.getProgress('sell_10', { productsSold: 50 });
+      expect(progress.percentage).toBe(100);
+    });
+
+    it('should return 0% when no progress', () => {
+      const progress = achievementSystem.getProgress('merge_100', { mergeCount: 0 });
+      expect(progress.percentage).toBe(0);
+    });
+
+    it('should track unlock_3_animals progress', () => {
+      const progress = achievementSystem.getProgress('unlock_3_animals', { unlockedAnimals: 2 });
+      expect(progress.current).toBe(2);
+      expect(progress.target).toBe(3);
+      expect(progress.percentage).toBeCloseTo(66.67, 1);
+    });
+
+    it('should return 0/1 for binary achievements like max_upgrade', () => {
+      const progress = achievementSystem.getProgress('max_upgrade', { hasMaxUpgrade: false });
+      expect(progress.current).toBe(0);
+      expect(progress.target).toBe(1);
+      expect(progress.percentage).toBe(0);
+    });
+
+    it('should return 100 for binary achievements when condition met', () => {
+      const progress = achievementSystem.getProgress('max_upgrade', { hasMaxUpgrade: true });
+      expect(progress.current).toBe(1);
+      expect(progress.percentage).toBe(100);
+    });
+
+    it('should return all achievement progress at once', () => {
+      const allProgress = achievementSystem.getAllProgress({
+        mergeCount: 50,
+        productsSold: 3,
+        unlockedAnimals: 1,
+        hasMaxUpgrade: false,
+        allProductsCollected: false,
+      });
+
+      expect(allProgress).toHaveLength(6);
+      const sellProgress = allProgress.find(p => p.id === 'sell_10');
+      expect(sellProgress!.percentage).toBe(30);
+      const mergeProgress = allProgress.find(p => p.id === 'merge_100');
+      expect(mergeProgress!.percentage).toBe(50);
+    });
+  });
+
   describe('Batch Check', () => {
     it('should check all achievements at once', () => {
       const newlyUnlocked = achievementSystem.checkAll({
