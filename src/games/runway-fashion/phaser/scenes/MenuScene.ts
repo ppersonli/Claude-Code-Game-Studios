@@ -129,6 +129,6 @@ export class MenuScene extends Phaser.Scene {
       const raw = localStorage.getItem(SAVE_KEY)
       if (raw) return JSON.parse(raw)
     } catch { /* ignore */ }
-    return { highScore: 0, coins: 0, playerLevel: 1 }
+    return { highScore: 0, coins: 0 }
   }
 }

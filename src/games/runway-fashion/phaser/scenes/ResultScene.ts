@@ -107,15 +107,13 @@ export class ResultScene extends Phaser.Scene {
     const adBtnY = btnY - 70
     this.createButton(cx, adBtnY, 300, 50, '📺 x2 Coins', 0x4CAF50, () => {
       const adManager = AdManager.getInstance()
-      adManager.requestRewardedAd(
-        () => {
-          // Reward: double coins
+      adManager.requestRewardedAd().then((rewarded) => {
+        if (rewarded) {
           this.saveProgress(coinsEarned * 2, breakdown.total)
           audioEngine.play('perfect')
           spawnParticles(this, cx, adBtnY, [0xFFD700, 0x4CAF50], 15)
-        },
-        () => { /* ad closed without reward */ },
-      )
+        }
+      })
     }, 3000)
 
     // Save once immediately

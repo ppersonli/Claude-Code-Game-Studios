@@ -214,7 +214,7 @@ export class DressUpScene extends Phaser.Scene {
       const cellContainer = this.add.container(x, y, [cellBg, img, name, dot])
       this.clothingGrid.add(cellContainer)
 
-      // Interactive
+      // Interactive hit zone (NOT in container to avoid double-positioning)
       const hit = this.add.zone(x, y, GRID_CELL, GRID_CELL).setInteractive({ useHandCursor: true })
       hit.on('pointerdown', () => {
         audioEngine.play('add')

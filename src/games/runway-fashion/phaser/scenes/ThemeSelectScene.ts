@@ -68,7 +68,7 @@ export class ThemeSelectScene extends Phaser.Scene {
     for (let i = 0; i < allThemes.length; i++) {
       const { theme, locked, isWeekly } = allThemes[i]
       const y = startY + i * (cardH + gap)
-      this.createThemeCard(cx, y, 600, cardH, theme, locked, isWeekly)
+      this.createThemeCard(cx, y, 600, cardH, theme, locked, isWeekly, i)
     }
 
     // Back button (top left)
@@ -86,6 +86,7 @@ export class ThemeSelectScene extends Phaser.Scene {
   private createThemeCard(
     x: number, y: number, w: number, h: number,
     theme: Theme, locked: boolean, isWeekly: boolean,
+    index: number,
   ): void {
     const container = this.add.container(x, y)
     const bgColor = locked ? 0x333333 : 0x3d2b5e
@@ -161,7 +162,7 @@ export class ThemeSelectScene extends Phaser.Scene {
       })
       hitZone.on('pointerdown', () => {
         audioEngine.play('add')
-        spawnParticles(this, 0, h / 2, [0xFF6B9D, 0xFFD700], 8)
+        spawnParticles(this, x, h / 2, [0xFF6B9D, 0xFFD700], 8)
         this.time.delayedCall(200, () => {
           this.scene.start('DressUpScene', { theme })
         })
@@ -174,7 +175,7 @@ export class ThemeSelectScene extends Phaser.Scene {
     container.x = x + 100
     this.tweens.add({
       targets: container, alpha: 1, x: x,
-      duration: 400, delay: 100 * (this.children.getIndex(container) ?? 0),
+      duration: 400, delay: 100 * index,
       ease: 'Power2',
     })
   }

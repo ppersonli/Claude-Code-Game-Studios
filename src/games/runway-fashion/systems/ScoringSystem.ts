@@ -1,5 +1,5 @@
 import type { Clothing, Theme, ScoreBreakdown, Grade } from '../data/types'
-import { SCORING_CONFIG, GRADE_THRESHOLDS } from '../data/scoring'
+import { SCORING_CONFIG, GRADE_THRESHOLDS, RUNWAY_ACTIONS } from '../data/scoring'
 
 const TOTAL_CATEGORIES = 5 // top, bottom, shoes, accessory, hair
 
@@ -31,11 +31,9 @@ export class ScoringSystem {
     const base = 40
     if (actions.length === 0) return base
 
+    const bonusMap = new Map(RUNWAY_ACTIONS.map(a => [a.id, a.bonusScore]))
     const uniqueActions = new Set(actions).size
-    const totalBonus = actions.reduce((sum, action) => {
-      const bonus = action === 'pose' ? 20 : action === 'twirl' ? 15 : action === 'wave' ? 10 : 5
-      return sum + bonus
-    }, 0)
+    const totalBonus = actions.reduce((sum, action) => sum + (bonusMap.get(action) ?? 5), 0)
     const diversityBonus = uniqueActions * 5
 
     return Math.min(100, base + totalBonus + diversityBonus)

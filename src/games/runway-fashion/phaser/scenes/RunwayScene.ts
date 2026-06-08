@@ -351,6 +351,12 @@ export class RunwayScene extends Phaser.Scene {
       this.tweens.add({
         targets: judge, scaleX: 1, scaleY: 1,
         duration: 400, ease: 'Back.easeOut',
+        onComplete: () => {
+          // Reset to default judge emoji after 1.5s
+          this.time.delayedCall(1500, () => {
+            if (judge.active) judge.setText('‍⚖️')
+          })
+        },
       })
     }
   }
