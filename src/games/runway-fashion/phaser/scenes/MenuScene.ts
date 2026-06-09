@@ -5,8 +5,6 @@ import { audioEngine } from '@shared/phaser/audio'
 import { t } from '../../i18n'
 import { SaveSystem } from '../../systems/SaveSystem'
 
-const SAVE_KEY = 'runway-fashion-save'
-
 export class MenuScene extends Phaser.Scene {
   private saveSystem = new SaveSystem()
 

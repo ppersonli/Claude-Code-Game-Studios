@@ -9,7 +9,7 @@ import { t } from '../../i18n'
 import type { Theme, Clothing, ClothingCategory } from '../../data/types'
 
 const TAB_HEIGHT = 80
-const GRID_TOP = GAME_HEIGHT - 520
+const GRID_TOP = 750
 const GRID_COLS = 4
 const GRID_CELL = 140
 const GRID_GAP = 14
@@ -113,7 +113,7 @@ export class DressUpScene extends Phaser.Scene {
 
   private createTabs(): void {
     const tabW = GAME_WIDTH / CLOTHING_TABS.length
-    const tabY = GAME_HEIGHT - TAB_HEIGHT - 520 + GRID_TOP - 20
+    const tabY = GRID_TOP - 40
 
     for (let i = 0; i < CLOTHING_TABS.length; i++) {
       const cat = CLOTHING_TABS[i]
