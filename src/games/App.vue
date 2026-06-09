@@ -25,6 +25,9 @@ const games: Game[] = [
   { slug: 'space-factory-idle', name: '太空工厂', desc: '星际工厂帝国，升级产线，Prestige重置', emoji: '🏭', color: '#aa00ff', tag: '放置' },
   { slug: 'dungeon-defense-idle', name: '地牢防御', desc: '塔防+放置，建塔打怪，离线战斗', emoji: '🏰', color: '#ff5722', tag: '塔防' },
   { slug: 'bounce-golf', name: 'Bounce Golf', desc: '一杆进洞？球会弹到外太空', emoji: '⛳', color: '#00ff88', tag: '物理' },
+  { slug: 'idle-garden', name: 'Idle Garden', desc: '种植花卉，经营花园帝国', emoji: '🌻', color: '#22c55e', tag: '放置' },
+  { slug: 'cafe-tycoon', name: 'Café Tycoon', desc: '经营咖啡帝国，从路边摊到连锁店', emoji: '☕', color: '#8B4513', tag: '经营' },
+  { slug: 'runway-fashion', name: 'T台换装秀', desc: '搭配服装，走上T台，赢得评委高分', emoji: '👗', color: '#FF6B9D', tag: '换装' },
 ]
 
 function play(slug: string) {
