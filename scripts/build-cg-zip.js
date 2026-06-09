@@ -28,6 +28,12 @@ const games = [
   'space-farm-idle',
   'bounce-golf',
   'idle-garden',
+  'cafe-tycoon',
+  'axolotl-clicker',
+  'gravity-merge',
+  'magnet-master',
+  'synth-kitchen',
+  'runway-fashion',
 ]
 
 console.log('📦 生成CG提交包...\n')

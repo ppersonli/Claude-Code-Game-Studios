@@ -3,10 +3,13 @@ import { GAME_WIDTH, GAME_HEIGHT } from '../../data/constants'
 import { fadeIn, spawnParticles } from '@shared/utils/poki-polish'
 import { audioEngine } from '@shared/phaser/audio'
 import { t } from '../../i18n'
+import { SaveSystem } from '../../systems/SaveSystem'
 
 const SAVE_KEY = 'runway-fashion-save'
 
 export class MenuScene extends Phaser.Scene {
+  private saveSystem = new SaveSystem()
+
   constructor() {
     super({ key: 'MenuScene' })
   }
@@ -124,11 +127,7 @@ export class MenuScene extends Phaser.Scene {
     })
   }
 
-  private loadSave(): { highScore: number; coins: number } {
-    try {
-      const raw = localStorage.getItem(SAVE_KEY)
-      if (raw) return JSON.parse(raw)
-    } catch { /* ignore */ }
-    return { highScore: 0, coins: 0 }
+  private loadSave() {
+    return this.saveSystem.load()
   }
 }

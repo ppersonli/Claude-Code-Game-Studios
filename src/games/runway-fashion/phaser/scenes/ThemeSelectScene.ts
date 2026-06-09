@@ -4,12 +4,12 @@ import { ThemeSystem } from '../../systems/ThemeSystem'
 import { fadeIn, fadeOut, spawnParticles } from '@shared/utils/poki-polish'
 import { audioEngine } from '@shared/phaser/audio'
 import { t } from '../../i18n'
+import { SaveSystem } from '../../systems/SaveSystem'
 import type { Theme } from '../../data/types'
-
-const SAVE_KEY = 'runway-fashion-save'
 
 export class ThemeSelectScene extends Phaser.Scene {
   private themeSystem!: ThemeSystem
+  private saveSystem = new SaveSystem()
   private playerLevel = 1
 
   constructor() {
@@ -21,10 +21,7 @@ export class ThemeSelectScene extends Phaser.Scene {
     this.themeSystem = new ThemeSystem()
 
     // Load player level
-    try {
-      const raw = localStorage.getItem(SAVE_KEY)
-      if (raw) this.playerLevel = JSON.parse(raw).playerLevel ?? 1
-    } catch { /* ignore */ }
+    this.playerLevel = this.saveSystem.getPlayerLevel()
 
     // Background
     const bg = this.add.graphics()

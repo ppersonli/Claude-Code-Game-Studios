@@ -4,9 +4,8 @@ import { fadeIn, spawnParticles } from '@shared/utils/poki-polish'
 import { audioEngine } from '@shared/phaser/audio'
 import { AdManager } from '../../../../services/AdManager'
 import { t } from '../../i18n'
+import { SaveSystem } from '../../systems/SaveSystem'
 import type { Theme, Clothing, ScoreBreakdown } from '../../data/types'
-
-const SAVE_KEY = 'runway-fashion-save'
 
 interface ResultData {
   theme: Theme
@@ -17,6 +16,8 @@ interface ResultData {
 }
 
 export class ResultScene extends Phaser.Scene {
+  private saveSystem = new SaveSystem()
+
   constructor() {
     super({ key: 'ResultScene' })
   }
@@ -278,12 +279,8 @@ export class ResultScene extends Phaser.Scene {
   }
 
   private saveProgress(coinsEarned: number, score: number): void {
-    try {
-      const raw = localStorage.getItem(SAVE_KEY)
-      const save = raw ? JSON.parse(raw) : { highScore: 0, coins: 0, playerLevel: 1 }
-      save.coins = (save.coins ?? 0) + coinsEarned
-      save.highScore = Math.max(save.highScore ?? 0, score)
-      localStorage.setItem(SAVE_KEY, JSON.stringify(save))
-    } catch { /* ignore */ }
+    this.saveSystem.addCoins(coinsEarned)
+    this.saveSystem.updateHighScore(score)
+    this.saveSystem.recordGamePlayed()
   }
 }
